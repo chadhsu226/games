@@ -11,9 +11,26 @@ canvas{display:block;}
 #ov .bonus{font-size:14px;color:#7fffb0;margin:4px 0;}
 #ov button{margin-top:14px;padding:10px 28px;background:linear-gradient(135deg,#ff69b4,#c040a0);color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:bold;}
 #hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:rgba(255,255,120,0.4);font-size:11px;pointer-events:none;white-space:nowrap;}
+/* 玩家代號輸入畫面 */
+#nameScreen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(4,4,24,0.97);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#nameScreen h2{color:#ffe44d;font-size:22px;margin:0;}
+#nameScreen p{color:#aaa;font-size:13px;margin:0;}
+#nameInput{padding:10px 18px;background:#1a0a2e;border:2px solid #ff69b4;border-radius:8px;color:#fff;font-size:18px;text-align:center;outline:none;width:220px;}
+#nameInput::placeholder{color:#666;}
+#startBtn{padding:10px 32px;background:linear-gradient(135deg,#ff69b4,#c040a0);color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:bold;}
+#startBtn:hover{opacity:0.85;}
+/* 送出狀態提示 */
+#sendStatus{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);font-size:11px;color:#7fffb0;white-space:nowrap;display:none;}
 </style></head><body>
 <div id="gw">
   <canvas id="c" width="420" height="740"></canvas>
+  <!-- 玩家代號輸入畫面 -->
+  <div id="nameScreen">
+    <h2>🎮 Marble Bingo</h2>
+    <p>請輸入你的代號再開始遊戲</p>
+    <input id="nameInput" type="text" placeholder="輸入代號" maxlength="16" autocomplete="off"/>
+    <button id="startBtn" onclick="startGame()">開始遊戲</button>
+  </div>
   <div id="ov">
     <h2 id="ovT">遊戲結束</h2>
     <p id="ovS"></p>
@@ -25,8 +42,41 @@ canvas{display:block;}
     <button onclick="restart()">再來一局</button>
   </div>
   <div id="hint">點擊 或 空白鍵 發射</div>
+  <div id="sendStatus">✅ 資料已記錄</div>
 </div>
 <script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycby_IpaD1nzRmZrlOscHjne7OhysSuiqS5KDJYxV3pKn_XMDJRjwISy2-_LvqxVl6hy4/exec';
+let playerName = '';
+let totalRounds = 0;
+
+function startGame() {
+  const input = document.getElementById('nameInput').value.trim();
+  if (!input) { document.getElementById('nameInput').focus(); return; }
+  playerName = input;
+  document.getElementById('nameScreen').style.display = 'none';
+  initGame(); startShuffle(); loop();
+}
+
+// Enter 鍵也可以開始
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startGame();
+  });
+});
+
+function sendToSheet(score, lines) {
+  totalRounds++;
+  fetch(SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player: playerName, score: score, rounds: totalRounds })
+  }).then(() => {
+    const s = document.getElementById('sendStatus');
+    s.style.display = 'block';
+    setTimeout(() => s.style.display = 'none', 3000);
+  }).catch(() => {});
+}
 const C=document.getElementById('c'),ctx=C.getContext('2d');
 const W=420,H=740;
 const BALL_R=11;
@@ -197,6 +247,7 @@ function endGame(reason,jackpot){
   document.getElementById('ovBonus').textContent=missionDone?`🎯 任務獎勵：+${bonus} 分`:'任務未完成 (+0)';
   document.getElementById('ovSc').textContent=(sc+bonus).toLocaleString()+' 分';
   document.getElementById('ov').style.display='block';
+  sendToSheet(sc+bonus, ln);
 }
 
 function update(){
@@ -428,6 +479,6 @@ function loop(){
 
 C.addEventListener('click',()=>{if(!shufflePhase&&!gameOver)spawnBall();});
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&!shufflePhase&&!gameOver){e.preventDefault();spawnBall();}});
-initGame();startShuffle();loop();
+
 </script>
 </body></html>
