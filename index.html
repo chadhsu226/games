@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Stars background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 90%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 70px 20px 50px;
+  }
+
+  .glow-ring {
+    display: inline-block;
+    font-size: 3rem;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 0 20px var(--pink));
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { filter: drop-shadow(0 0 20px var(--pink)); }
+    50% { filter: drop-shadow(0 0 35px var(--purple)); }
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--pink), var(--yellow), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .tagline {
+    font-size: 0.88rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    font-weight: 300;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 700px;
+    margin: 0 auto 40px;
+    padding: 0 24px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--muted));
+  }
+  .divider::after {
+    background: linear-gradient(to left, transparent, var(--muted));
+  }
+  .divider span {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ── Game Grid ── */
+  .grid {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  /* ── Game Card ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid rgba(255,105,180,0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    position: relative;
+  }
+  .card:hover {
+    transform: translateY(-6px) scale(1.01);
+    border-color: var(--pink);
+    box-shadow: 0 8px 40px rgba(255,105,180,0.2), 0 0 0 1px rgba(255,105,180,0.1);
+  }
+
+  .card-preview {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-preview.marble {
+    background: radial-gradient(ellipse at 30% 40%, #1a0a2e 0%, #060612 70%);
+  }
+
+  /* Animated preview for marble bingo */
+  .preview-icon {
+    font-size: 4rem;
+    animation: float 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 16px var(--pink));
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .preview-dots {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    padding: 16px;
+    opacity: 0.25;
+  }
+  .dot {
+    border-radius: 50%;
+    background: var(--pink);
+  }
+  .dot:nth-child(3n+1) { background: var(--yellow); }
+  .dot:nth-child(3n+2) { background: var(--green); }
+
+  .badge-new {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--pink);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .card-body { padding: 20px 22px 22px; }
+
+  .game-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--yellow);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .game-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 16px;
+    font-weight: 300;
+  }
+
+  .tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.68rem;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid;
+    letter-spacing: 0.05em;
+  }
+  .tag-pink { color: var(--pink); border-color: rgba(255,105,180,0.4); }
+  .tag-green { color: var(--green); border-color: rgba(127,255,176,0.4); }
+  .tag-yellow { color: var(--yellow); border-color: rgba(255,228,77,0.4); }
+
+  .play-btn {
+    display: block;
+    margin-top: 16px;
+    text-align: center;
+    padding: 10px;
+    background: linear-gradient(135deg, #ff69b4, #c040a0);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s;
+  }
+  .card:hover .play-btn { opacity: 0.85; }
+
+  /* ── Coming Soon Card ── */
+  .card-coming {
+    background: var(--bg2);
+    border: 1px dashed rgba(102,102,170,0.3);
+    border-radius: 16px;
+    padding: 40px 22px;
+    text-align: center;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 260px;
+  }
+  .card-coming .plus { font-size: 2rem; opacity: 0.3; }
+  .card-coming p { font-size: 0.82rem; }
+
+  /* ── Footer ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 50px 20px 30px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="glow-ring">🎮</div>
+  <h1>CHAD'S GAME ZONE</h1>
+  <p class="tagline">play · relax · have fun</p>
+</header>
+
+<div class="divider"><span>遊戲列表</span></div>
+
+<div class="grid">
+
+  <!-- Marble Bingo -->
+  <a href="marble-bingo.html" class="card">
+    <div class="card-preview marble">
+      <div class="preview-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="preview-icon">🔮</div>
+      <span class="badge-new">New</span>
+    </div>
+    <div class="card-body">
+      <div class="game-name">MARBLE BINGO</div>
+      <div class="game-desc">發射彈珠、連線得分！湊成一排就是 BINGO。考驗你的瞄準技巧與策略。</div>
+      <div class="tags">
+        <span class="tag tag-pink">射擊</span>
+        <span class="tag tag-green">單人</span>
+        <span class="tag tag-yellow">益智</span>
+      </div>
+      <div class="play-btn">▶ 開始遊戲</div>
+    </div>
+  </a>
+
+  <!-- Coming soon slots -->
+  <div class="card-coming">
+    <div class="plus">＋</div>
+    <p>更多遊戲即將推出</p>
+  </div>
+
+  <div class="card-coming">
+    <div class="plus">＋</div>
+    <p>更多遊戲即將推出</p>
+  </div>
+
+</div>
+
+<footer>Chad's Game Zone · Built with GitHub Pages</footer>
+
+</body>
+</html>
