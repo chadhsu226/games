@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#04080f;display:flex;justify-content:center;font-family:'Noto Sans TC',Arial,sans-serif;min-height:100vh;}
+#gw{width:420px;position:relative;}
+canvas{display:block;}
+#ov{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(4,8,24,0.97);border:2px solid #ffd700;border-radius:16px;padding:22px 26px;text-align:center;color:#fff;display:none;z-index:10;min-width:290px;max-width:340px;box-shadow:0 0 40px rgba(255,215,0,0.25);}
+#ov h2{margin:0 0 6px;font-size:22px;color:#ffd700;}
+#ov .sc{font-size:34px;color:#ffd700;font-weight:bold;margin:10px 0 4px;}
+#ov .bonus-list{font-size:12px;color:#7fffb0;text-align:left;margin:6px 0;line-height:1.9;background:rgba(0,255,100,0.05);border-radius:6px;padding:6px 10px;}
+#ov .base-info{font-size:13px;color:#aaa;margin:4px 0;}
+#ov button{margin-top:14px;padding:10px 28px;background:linear-gradient(135deg,#ffd700,#c8860a);color:#000;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:bold;}
+#hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:rgba(255,215,0,0.35);font-size:11px;pointer-events:none;white-space:nowrap;}
+#nameScreen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(4,8,24,0.97);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#nameScreen h2{color:#ffd700;font-size:22px;margin:0;}
+#nameScreen p{color:#aaa;font-size:13px;margin:0;}
+#nameInput{padding:10px 18px;background:#0a1428;border:2px solid #ffd700;border-radius:8px;color:#fff;font-size:18px;text-align:center;outline:none;width:220px;}
+#nameInput::placeholder{color:#555;}
+#startBtn{padding:10px 32px;background:linear-gradient(135deg,#ffd700,#c8860a);color:#000;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:bold;}
+#startBtn:hover{opacity:0.85;}
+#sendStatus{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);font-size:11px;color:#7fffb0;white-space:nowrap;display:none;}
+</style></head><body>
+<div id="gw">
+  <canvas id="c" width="420" height="740"></canvas>
+  <div id="nameScreen">
+    <h2>💰 金融大富翁 Bingo</h2>
+    <p>請輸入你的代號再開始</p>
+    <input id="nameInput" type="text" placeholder="輸入代號" maxlength="16" autocomplete="off"/>
+    <button id="startBtn" onclick="startGame()">開始遊戲</button>
+  </div>
+  <div id="ov">
+    <h2 id="ovT">遊戲結束</h2>
+    <p id="ovS" style="font-size:13px;color:#aaa;margin:4px 0;"></p>
+    <p id="ovR" style="color:#7fffb0;font-size:14px;margin-top:6px;"></p>
+    <p id="ovL" class="base-info"></p>
+    <div class="bonus-list" id="ovBonus"></div>
+    <p style="color:#888;font-size:12px;margin-top:6px;">最終得分</p>
+    <div class="sc" id="ovSc"></div>
+    <button onclick="restart()">再來一局</button>
+  </div>
+  <div id="hint">點擊 或 空白鍵 發射</div>
+  <div id="sendStatus">✅ 資料已記錄</div>
+</div>
+<script>
+const SHEET_URL='https://script.google.com/macros/s/AKfycby_IpaD1nzRmZrlOscHjne7OhysSuiqS5KDJYxV3pKn_XMDJRjwISy2-_LvqxVl6hy4/exec';
+let playerName='',totalRounds=0;
+function startGame(){
+  const input=document.getElementById('nameInput').value.trim();
+  if(!input){document.getElementById('nameInput').focus();return;}
+  playerName=input;document.getElementById('nameScreen').style.display='none';
+  initGame();startShuffle();loop();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')startGame();});
+});
+function sendToSheet(score,lines){
+  totalRounds++;
+  fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({player:playerName,score,rounds:totalRounds})
+  }).then(()=>{const s=document.getElementById('sendStatus');s.style.display='block';setTimeout(()=>s.style.display='none',3000);}).catch(()=>{});
+}
+
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=420,H=740,BALL_R=11,COLS=9,MAX_BALLS=9,SLOT_W=W/COLS,STUCK_TIMEOUT=5500,HUD_H=52;
+const CANNON_X=W/2,CANNON_BASE_Y=HUD_H+20,CANNON_LEN=38;
+let aimAngle=0,aimDir=1,aimSpeed=0.026;
+const AIM_MAX=Math.PI*0.38;
+function getTip(){return{x:CANNON_X+Math.sin(aimAngle)*CANNON_LEN,y:CANNON_BASE_Y+Math.cos(aimAngle)*CANNON_LEN};}
+
+const GRID_CELL=67,GRID_W=GRID_CELL*3,GRID_LEFT=(W-GRID_W)/2,GRID_TOP=CANNON_BASE_Y+CANNON_LEN+10,GRID_H=GRID_CELL*3;
+const MISSION_H=24,MISSION_Y=GRID_TOP+GRID_H+6,NAIL_TOP=MISSION_Y+MISSION_H+10;
+const ROW_GAP=42,NAIL_MARGIN=55,NAIL_STEP=(W-NAIL_MARGIN*2)/7;
+const SLOT_AREA_Y=NAIL_TOP+ROW_GAP*4+12;
+const WALL_L=BALL_R+6,WALL_R_=W-BALL_R-6;
+const NAILS=[];
+for(let r=0;r<4;r++){const y=NAIL_TOP+r*ROW_GAP;if(r%2===0){for(let c=0;c<8;c++)NAILS.push({x:NAIL_MARGIN+c*NAIL_STEP,y});}else{for(let c=0;c<7;c++)NAILS.push({x:NAIL_MARGIN+NAIL_STEP/2+c*NAIL_STEP,y});}}
+
+const LINE_SCORES=[3,8,15,30,50,100,0,500];
+const GRID_LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+// ═══════════════════════════════
+//  LOGO 繪製函數（根據真實品牌特徵）
+// ═══════════════════════════════
+
+// 南山人壽：新版三色X交叉設計（藍底，藍/黃/綠斜色塊）
+function drawNanshan(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  // 底圓
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#004B8D':'#001e3a';c.fill();
+  if(lit){
+    // 三條色帶（交叉斜紋，代表新版LOGO）
+    const bands=[{color:'#0072CE',angle:-35},{color:'#FFC72C',angle:0},{color:'#00A650',angle:35}];
+    bands.forEach((b,i)=>{
+      c.save();c.rotate(b.angle*Math.PI/180);
+      c.fillStyle=b.color;c.globalAlpha=0.85;
+      c.fillRect(-s*.55,s*(i-1)*.28,s*1.1,s*.22);
+      c.restore();
+    });
+    // 覆蓋圓形裁切
+    c.globalCompositeOperation='destination-in';
+    c.beginPath();c.arc(0,0,r*.93,0,Math.PI*2);c.fill();
+    c.globalCompositeOperation='source-over';
+  }
+  // 南山文字
+  c.fillStyle=lit?'#fff':'#aaa';c.font=`bold ${r*.38}px Arial`;c.textAlign='center';c.textBaseline='middle';
+  c.fillText('NS',0,0);
+  c.restore();
+}
+
+// 國泰人壽：綠色大樹（三層漸深綠圓弧組成樹冠）
+function drawCathayLife(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#f5fff5':'#0a1a0a';c.fill();
+  const greens=lit?['#00A651','#007A3D','#004F27']:['#1a3a1a','#122a12','#0a1a0a'];
+  // 樹冠三層（從小到大，由深到淺）
+  const layers=[{r:s*.28,y:-s*.52},{r:s*.38,y:-s*.22},{r:s*.46,y:s*.08}];
+  layers.forEach((l,i)=>{
+    c.beginPath();c.arc(0,l.y,l.r,Math.PI,0);c.closePath();
+    c.fillStyle=greens[2-i];c.fill();
+  });
+  // 樹幹
+  c.fillStyle=greens[2];c.fillRect(-s*.08,s*.1,s*.16,s*.35);
+  c.restore();
+}
+
+// 安聯人壽(Allianz)：深藍底+標誌性斜線條(三條平行線組成鷹翼)
+function drawAllianz(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#003781':'#001030';c.fill();
+  c.strokeStyle=lit?'#ffffff':'#555';
+  c.lineWidth=s*.14;c.lineCap='round';
+  // 左右各三條斜線（鷹翼）
+  const lines=[{x1:-s*.62,y1:-s*.15,x2:-s*.15,y2:s*.5},{x1:-s*.45,y1:-s*.5,x2:-s*.01,y2:s*.18},{x1:-s*.22,y1:-s*.7,x2:s*.15,y2:-s*.12}];
+  lines.forEach(l=>{c.beginPath();c.moveTo(l.x1,l.y1);c.lineTo(l.x2,l.y2);c.stroke();});
+  const rlines=[{x1:s*.62,y1:-s*.15,x2:s*.15,y2:s*.5},{x1:s*.45,y1:-s*.5,x2:s*.01,y2:s*.18},{x1:s*.22,y1:-s*.7,x2:-s*.15,y2:-s*.12}];
+  rlines.forEach(l=>{c.beginPath();c.moveTo(l.x1,l.y1);c.lineTo(l.x2,l.y2);c.stroke();});
+  c.restore();
+}
+
+// 台北富邦：橘藍雙色，F字+圓點
+function drawFubon(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#FFFFFF':'#0a0a18';c.fill();
+  // 橘色F
+  c.fillStyle=lit?'#F47920':'#7a3c10';
+  c.fillRect(-s*.5,-s*.72,s*.18,s*1.44);// 豎桿
+  c.fillRect(-s*.5,-s*.72,s*.65,s*.2);// 上橫
+  c.fillRect(-s*.5,-s*.12,s*.52,s*.18);// 中橫
+  // 藍色圓點
+  c.fillStyle=lit?'#003087':'#001030';
+  c.beginPath();c.arc(s*.28,s*.45,s*.28,0,Math.PI*2);c.fill();
+  c.restore();
+}
+
+// 兆豐銀行：深藍圓底，白色抽象M（代表兆豐）
+function drawMegaBank(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#00205B':'#000b1e';c.fill();
+  // 白色抽象旗幟/M造型
+  c.strokeStyle=lit?'#FFFFFF':'#666';c.lineWidth=s*.14;c.lineCap='round';c.lineJoin='round';
+  c.beginPath();c.moveTo(-s*.52,s*.42);c.lineTo(-s*.52,-s*.28);c.lineTo(0,s*.28);c.lineTo(s*.52,-s*.28);c.lineTo(s*.52,s*.42);c.stroke();
+  // 頂部小旗
+  c.fillStyle=lit?'#FFD700':'#665500';
+  c.beginPath();c.moveTo(-s*.52,-s*.28);c.lineTo(-s*.18,-s*.62);c.lineTo(-s*.18,-s*.28);c.closePath();c.fill();
+  c.restore();
+}
+
+// 合作金庫：深綠圓底，金色麥穗
+function drawCoopBank(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#005C38':'#001a10';c.fill();
+  // 金色麥穗（主幹+左右麥粒）
+  c.strokeStyle=lit?'#FFD700':'#665500';c.lineWidth=s*.09;c.lineCap='round';
+  c.beginPath();c.moveTo(0,s*.58);c.lineTo(0,-s*.42);c.stroke();
+  const grains=[-s*.38,-s*.22,-s*.06,s*.1,s*.24];
+  grains.forEach((y,i)=>{
+    c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(s*.35,y-s*.12,s*.28,y-s*.28);c.stroke();
+    c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(-s*.35,y-s*.12,-s*.28,y-s*.28);c.stroke();
+  });
+  // 頂端麥穗
+  c.fillStyle=lit?'#FFD700':'#665500';
+  c.beginPath();c.ellipse(0,-s*.52,s*.1,s*.16,0,0,Math.PI*2);c.fill();
+  c.restore();
+}
+
+// 元大證券：深藍圓底，橘色Y + 橫線（元大標誌）
+function drawYuanta(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#002060':'#000820';c.fill();
+  // 橘色Y字（粗體）
+  c.strokeStyle=lit?'#F47920':'#7a3c10';c.lineWidth=s*.2;c.lineCap='round';c.lineJoin='round';
+  c.beginPath();c.moveTo(-s*.42,-s*.55);c.lineTo(0,-s*.08);c.lineTo(s*.42,-s*.55);c.stroke();
+  c.beginPath();c.moveTo(0,-s*.08);c.lineTo(0,s*.52);c.stroke();
+  // 底部橫線（品牌特徵）
+  c.strokeStyle=lit?'#FFFFFF':'#444';c.lineWidth=s*.08;
+  c.beginPath();c.moveTo(-s*.6,s*.68);c.lineTo(s*.6,s*.68);c.stroke();
+  c.restore();
+}
+
+// 凱基證券：藍圓底，白色K字（KGI品牌）
+function drawKGI(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#003DA5':'#001240';c.fill();
+  // 白色K
+  c.strokeStyle=lit?'#FFFFFF':'#555';c.lineWidth=s*.16;c.lineCap='round';
+  c.beginPath();c.moveTo(-s*.22,-s*.55);c.lineTo(-s*.22,s*.55);c.stroke();// 豎桿
+  c.beginPath();c.moveTo(-s*.22,-s*.02);c.lineTo(s*.45,-s*.58);c.stroke();// 上斜
+  c.beginPath();c.moveTo(-s*.22,-s*.02);c.lineTo(s*.48,s*.55);c.stroke();// 下斜
+  // 橘色底線（KGI品牌色）
+  c.strokeStyle=lit?'#F47920':'#7a3c10';c.lineWidth=s*.12;
+  c.beginPath();c.moveTo(-s*.55,s*.68);c.lineTo(s*.55,s*.68);c.stroke();
+  c.restore();
+}
+
+// 高盛證券(Goldman Sachs)：深藍方形底，白色GS大寫
+function drawGoldmanSachs(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  // 方形背景（高盛LOGO特色）
+  const hw=s*.82;
+  c.fillStyle=lit?'#1B3668':'#060e20';
+  roundRect2(c,-hw,-hw,hw*2,hw*2,s*.12);c.fill();
+  if(lit){c.strokeStyle='#3d5fa0';c.lineWidth=1.5;roundRect2(c,-hw,-hw,hw*2,hw*2,s*.12);c.stroke();}
+  // GS文字
+  c.fillStyle=lit?'#FFFFFF':'#888';
+  c.font=`bold ${s*.52}px 'Arial Black',Arial`;c.textAlign='center';c.textBaseline='middle';
+  c.fillText('GS',0,s*.05);
+  // 底部細線（品牌線條）
+  c.strokeStyle=lit?'#FFD700':'#665500';c.lineWidth=s*.07;
+  c.beginPath();c.moveTo(-hw*.8,s*.62);c.lineTo(hw*.8,s*.62);c.stroke();
+  c.restore();
+}
+
+// 花旗銀行(Citibank)：白底，深藍CITI+標誌性紅色弧線
+function drawCitibank(c,cx,cy,r,lit){
+  const s=r*.88;c.save();c.translate(cx,cy);
+  c.beginPath();c.arc(0,0,r*.95,0,Math.PI*2);
+  c.fillStyle=lit?'#FFFFFF':'#0a0a1a';c.fill();
+  // 深藍色 "citi" 文字感（簡化為字母塊）
+  c.fillStyle=lit?'#003087':'#002060';
+  c.font=`bold ${s*.38}px Arial`;c.textAlign='center';c.textBaseline='middle';
+  c.fillText('citi',0,-s*.12);
+  // 標誌性紅色弧線（花旗LOGO最特徵的元素）
+  c.strokeStyle=lit?'#CC0000':'#660000';c.lineWidth=s*.14;c.lineCap='round';
+  c.beginPath();c.arc(s*.28,-s*.12,s*.28,-Math.PI*.9,-Math.PI*.1);c.stroke();
+  c.restore();
+}
+
+function roundRect2(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+
+// ═══════════════════════════════════════════
+//  金融機構定義
+//  sector: 'insurance' | 'bank' | 'broker'
+//  origin: 'domestic' | 'foreign'
+// ═══════════════════════════════════════════
+const STOCK_DEFS=[
+  // 保險 (indices 0,1,2)
+  {sym:'南山', name:'南山人壽', sector:'insurance', sectorName:'保險', origin:'domestic', bg:'#001e3a', accent:'#0072CE', draw:drawNanshan},
+  {sym:'安聯', name:'安聯人壽', sector:'insurance', sectorName:'保險', origin:'foreign',   bg:'#001030', accent:'#5580ff', draw:drawAllianz},
+  {sym:'國泰', name:'國泰人壽', sector:'insurance', sectorName:'保險', origin:'domestic', bg:'#0a1a0a', accent:'#00A651', draw:drawCathayLife},
+  // 銀行 (indices 3,4,5)
+  {sym:'富邦', name:'台北富邦', sector:'bank',      sectorName:'銀行', origin:'domestic', bg:'#0a0a18', accent:'#F47920', draw:drawFubon},
+  {sym:'花旗', name:'花旗銀行', sector:'bank',      sectorName:'銀行', origin:'foreign',   bg:'#0a0a1a', accent:'#003087', draw:drawCitibank},
+  {sym:'合庫', name:'合作金庫', sector:'bank',      sectorName:'銀行', origin:'domestic', bg:'#001a10', accent:'#FFD700', draw:drawCoopBank},
+  // 券商 (indices 6,7,8)
+  {sym:'元大', name:'元大證券', sector:'broker',    sectorName:'券商', origin:'domestic', bg:'#000820', accent:'#F47920', draw:drawYuanta},
+  {sym:'凱基', name:'凱基證券', sector:'broker',    sectorName:'券商', origin:'domestic', bg:'#001240', accent:'#5580ff', draw:drawKGI},
+  {sym:'高盛', name:'高盛證券', sector:'broker',    sectorName:'券商', origin:'foreign',   bg:'#060e20', accent:'#FFD700', draw:drawGoldmanSachs},
+];
+
+// ══════════════════════
+//  整合加分規則（常態性）
+// ══════════════════════
+// 水平整合：每局集滿同產業3家 → +30
+// 垂直整合：三個產業全集齊 → +50
+// 國際加分：集滿至少1家國內+1家國外 → +20（每局）
+const SECTOR_BONUS_SCORE=30;
+const VERTICAL_BONUS_SCORE=50;
+const INTL_BONUS_SCORE=20;
+
+const SECTOR_COLORS={insurance:'#5599ff',bank:'#F47920',broker:'#FFD700'};
+const SECTOR_NAMES={insurance:'保險',bank:'銀行',broker:'券商'};
+
+function checkIntegration(gridArr){
+  const sectors=['insurance','bank','broker'];
+  const achieved=sectors.filter(sec=>
+    STOCKS.filter(s=>s.sector===sec).every(s=>gridArr[STOCKS.indexOf(s)])
+  );
+  const vertical=achieved.length===3;
+  // 國際加分：任一格國內 + 任一格國外
+  const hasDOM=STOCKS.some((s,i)=>s.origin==='domestic'&&gridArr[i]);
+  const hasFor=STOCKS.some((s,i)=>s.origin==='foreign'&&gridArr[i]);
+  const intl=hasDOM&&hasFor;
+  return{achieved,vertical,intl};
+}
+
+// 每局所有 bonus（依目前 grid 狀態）
+function calcAllBonuses(gridArr){
+  const {achieved,vertical,intl}=checkIntegration(gridArr);
+  let total=0;
+  achieved.forEach(()=>total+=SECTOR_BONUS_SCORE);
+  if(vertical)total+=VERTICAL_BONUS_SCORE;
+  if(intl)total+=INTL_BONUS_SCORE;
+  return total;
+}
+
+// 任務（以連線為主，整合改為常態所以任務改成更有趣的）
+const MISSIONS=[
+  {desc:'點亮上排',check:()=>GRID_LINES[0].every(i=>grid[i]),bonus:25,hi:[0,1,2]},
+  {desc:'點亮中排',check:()=>GRID_LINES[1].every(i=>grid[i]),bonus:25,hi:[3,4,5]},
+  {desc:'點亮下排',check:()=>GRID_LINES[2].every(i=>grid[i]),bonus:25,hi:[6,7,8]},
+  {desc:'點亮左縱',check:()=>GRID_LINES[3].every(i=>grid[i]),bonus:25,hi:[0,3,6]},
+  {desc:'點亮中縱',check:()=>GRID_LINES[4].every(i=>grid[i]),bonus:25,hi:[1,4,7]},
+  {desc:'點亮右縱',check:()=>GRID_LINES[5].every(i=>grid[i]),bonus:25,hi:[2,5,8]},
+  {desc:'點亮對角線',check:()=>GRID_LINES[6].every(i=>grid[i]),bonus:30,hi:[0,4,8]},
+  {desc:'點亮反對角',check:()=>GRID_LINES[7].every(i=>grid[i]),bonus:30,hi:[2,4,6]},
+  {desc:'點亮四個角落',check:()=>[0,2,6,8].every(i=>grid[i]),bonus:40,hi:[0,2,6,8]},
+  {desc:'點亮中心格',check:()=>grid[4],bonus:15,hi:[4]},
+  {desc:'達成2條以上連線',check:()=>countLines()>=2,bonus:35,hi:[]},
+  {desc:'集齊所有外資機構',check:()=>STOCKS.filter(s=>s.origin==='foreign').every(s=>{const i=STOCKS.indexOf(s);return i>=0&&grid[i];}),bonus:45,hi:[]},
+];
+
+let STOCKS=[...STOCK_DEFS];
+let iconCache={};
+let balls=[],grid=[],usedBalls=0,gameOver=false;
+let slotCounts=[],particles=[],flashCells=[],scorePopups=[];
+let currentMission=null,missionDone=false,missionFlash=0;
+let shufflePhase=true,shuffleStart=0,shuffleCards=[];
+// 追蹤哪些整合已觸發彈出（避免重複顯示），但分數每局結算
+let shownIntegrations=[];
+
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+function easeOut(t){return 1-Math.pow(1-Math.min(1,t),3);}
+function getIcon(di,lit,sz){const k=`${di}_${lit?1:0}_${sz}`;if(iconCache[k])return iconCache[k];const o=document.createElement('canvas');o.width=o.height=sz;STOCK_DEFS[di].draw(o.getContext('2d'),sz/2,sz/2,sz/2,lit);iconCache[k]=o;return o;}
+function countLines(){return GRID_LINES.filter(l=>l.every(i=>grid[i])).length;}
+function getScore(n){return n>0?(LINE_SCORES[n-1]||0):0;}
+
+function startShuffle(){
+  shufflePhase=true;shuffleStart=Date.now();
+  const arr=[...STOCK_DEFS];
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  STOCKS=arr;iconCache={};
+  shuffleCards=STOCKS.map((st,i)=>{
+    const col=i%3,row=Math.floor(i/3);
+    const tx=GRID_LEFT+col*GRID_CELL+GRID_CELL/2,ty=GRID_TOP+row*GRID_CELL+GRID_CELL/2;
+    const a=Math.random()*Math.PI*2,d=180+Math.random()*180;
+    return{st,tx,ty,sx:W/2+Math.cos(a)*d,sy:H/2+Math.sin(a)*d,rot0:(Math.random()-0.5)*Math.PI*3};
+  });
+}
+
+function initGame(){
+  grid=Array(9).fill(false);usedBalls=0;gameOver=false;
+  slotCounts=Array(9).fill(0);particles=[];flashCells=[];scorePopups=[];missionFlash=0;
+  currentMission=MISSIONS[Math.floor(Math.random()*MISSIONS.length)];missionDone=false;
+  shownIntegrations=[];
+}
+function restart(){document.getElementById('ov').style.display='none';initGame();startShuffle();}
+
+function spawnBall(){
+  if(shufflePhase||gameOver||usedBalls>=MAX_BALLS)return;
+  usedBalls++;
+  const tip=getTip();const dx=tip.x-CANNON_X,dy=tip.y-CANNON_BASE_Y;
+  const len=Math.sqrt(dx*dx+dy*dy),speed=2.8;
+  balls.push({x:tip.x,y:tip.y,vx:dx/len*speed,vy:dy/len*speed,landed:false,trail:[],spawnTime:Date.now()});
+}
+function addParticles(x,y,color){for(let i=0;i<20;i++){const a=Math.random()*Math.PI*2,sp=2+Math.random()*5;particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,r:2+Math.random()*2.5});}}
+
+function checkNewIntegrationPopups(){
+  const {achieved,vertical,intl}=checkIntegration(grid);
+  achieved.forEach(sec=>{
+    const key='h_'+sec;
+    if(!shownIntegrations.includes(key)){
+      shownIntegrations.push(key);
+      scorePopups.push({x:W/2,y:GRID_TOP+GRID_H/2-28,text:`🏦 ${SECTOR_NAMES[sec]}水平整合 +${SECTOR_BONUS_SCORE}`,life:2.2,vy:-0.5,color:SECTOR_COLORS[sec],big:true});
+    }
+  });
+  if(vertical&&!shownIntegrations.includes('vertical')){
+    shownIntegrations.push('vertical');
+    scorePopups.push({x:W/2,y:GRID_TOP+GRID_H/2-55,text:`⚡ 垂直整合達成 +${VERTICAL_BONUS_SCORE}`,life:2.8,vy:-0.42,color:'#ffd700',big:true});
+  }
+  if(intl&&!shownIntegrations.includes('intl')){
+    shownIntegrations.push('intl');
+    scorePopups.push({x:W/2,y:GRID_TOP+GRID_H/2-82,text:`🌐 國際企業加分 +${INTL_BONUS_SCORE}`,life:2.2,vy:-0.38,color:'#88ddff',big:true});
+  }
+}
+
+function landBall(b,slot){
+  b.landed=true;slotCounts[slot]++;
+  if(slotCounts[slot]>=2){setTimeout(()=>endGame(`${STOCKS[slot].sym} 進了第2球！`,false),400);return;}
+  const prev=countLines();
+  if(!grid[slot]){
+    grid[slot]=true;flashCells.push({idx:slot,life:1});
+    addParticles(GRID_LEFT+(slot%3)*GRID_CELL+GRID_CELL/2,GRID_TOP+Math.floor(slot/3)*GRID_CELL+GRID_CELL/2,STOCKS[slot].accent);
+    const now=countLines();
+    if(now>prev)scorePopups.push({x:W/2,y:GRID_TOP+GRID_H/2+12,text:`+${LINE_SCORES[now-1]}分 (${now}連線!)`,life:1,vy:-0.9,color:STOCKS[slot].accent});
+    checkNewIntegrationPopups();
+  }
+  if(!missionDone&&currentMission&&currentMission.check()){
+    missionDone=true;missionFlash=80;
+    scorePopups.push({x:W/2,y:GRID_TOP+GRID_H/2-12,text:`🎯 任務達成！+${currentMission.bonus}分`,life:1.8,vy:-0.7,color:'#ffd700',big:true});
+  }
+  setTimeout(()=>{
+    if(grid.every(v=>v)){endGame('九宮格全亮！金融大滿貫！',true);return;}
+    if(usedBalls>=MAX_BALLS&&balls.every(b=>b.landed))endGame('球數用盡',false);
+  },600);
+}
+
+function endGame(reason,jackpot){
+  if(gameOver)return;gameOver=true;
+  const ln=countLines(),sc=getScore(ln);
+  const missionBonus=missionDone&&currentMission?currentMission.bonus:0;
+  const intgBonus=calcAllBonuses(grid);
+  const total=sc+missionBonus+intgBonus;
+
+  document.getElementById('ovT').textContent=jackpot?'🏆 金融大滿貫！':'遊戲結束！';
+  document.getElementById('ovS').textContent=reason;
+  document.getElementById('ovR').textContent=`點亮：${grid.filter(v=>v).length}/9 格`;
+  document.getElementById('ovL').textContent=`連線：${ln} 條　基礎分：${sc}`;
+
+  const {achieved,vertical,intl}=checkIntegration(grid);
+  let bonusHtml='';
+  if(missionDone&&currentMission)bonusHtml+=`<div>🎯 任務「${currentMission.desc}」：+${missionBonus}</div>`;
+  achieved.forEach(sec=>bonusHtml+=`<div>🏦 ${SECTOR_NAMES[sec]}水平整合：+${SECTOR_BONUS_SCORE}</div>`);
+  if(vertical)bonusHtml+=`<div>⚡ 垂直整合（三產業全收）：+${VERTICAL_BONUS_SCORE}</div>`;
+  if(intl)bonusHtml+=`<div>🌐 國際企業加分（國內＋國外）：+${INTL_BONUS_SCORE}</div>`;
+  if(!bonusHtml)bonusHtml='<div style="color:#555">（本局無 Bonus）</div>';
+  document.getElementById('ovBonus').innerHTML=bonusHtml;
+  document.getElementById('ovSc').textContent=total.toLocaleString()+' 分';
+  document.getElementById('ov').style.display='block';
+  sendToSheet(total,ln);
+}
+
+function update(){
+  const now=Date.now();
+  if(shufflePhase){if(now-shuffleStart>3000)shufflePhase=false;return;}
+  aimAngle+=aimDir*aimSpeed;if(Math.abs(aimAngle)>AIM_MAX)aimDir*=-1;
+  if(missionFlash>0)missionFlash--;
+  balls.forEach(b=>{
+    if(b.landed)return;
+    if(now-b.spawnTime>STUCK_TIMEOUT){landBall(b,Math.min(8,Math.max(0,Math.floor(b.x/SLOT_W))));return;}
+    b.trail.push({x:b.x,y:b.y});if(b.trail.length>12)b.trail.shift();
+    b.vy+=0.20;b.x+=b.vx;b.y+=b.vy;b.vx*=0.999;
+    NAILS.forEach(n=>{
+      const dx=b.x-n.x,dy=b.y-n.y,dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<BALL_R+6&&dist>0.01){
+        const nx=dx/dist,ny=dy/dist,dot=b.vx*nx+b.vy*ny;
+        b.vx=(b.vx-2*dot*nx)*0.70+(Math.random()-0.5)*1.4;b.vy=(b.vy-2*dot*ny)*0.70;
+        if(b.vy<0.2)b.vy=0.2;b.x=n.x+nx*(BALL_R+8);b.y=n.y+ny*(BALL_R+8);
+      }
+    });
+    if(b.x<WALL_L){b.x=WALL_L;b.vx=Math.abs(b.vx)*0.5+1.8;b.vy=Math.abs(b.vy)+0.4;}
+    if(b.x>WALL_R_){b.x=WALL_R_;b.vx=-(Math.abs(b.vx)*0.5+1.8);b.vy=Math.abs(b.vy)+0.4;}
+    if(Math.sqrt(b.vx*b.vx+b.vy*b.vy)<0.6){b.vy+=1.8;b.vx+=(Math.random()-0.5)*1.5;}
+    if(b.y>SLOT_AREA_Y)landBall(b,Math.min(8,Math.max(0,Math.floor(b.x/SLOT_W))));
+  });
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.13;p.life-=0.028;});
+  particles=particles.filter(p=>p.life>0);
+  flashCells.forEach(f=>f.life-=0.016);flashCells=flashCells.filter(f=>f.life>0);
+  scorePopups.forEach(s=>{s.y+=s.vy;s.life-=0.009;});scorePopups=scorePopups.filter(s=>s.life>0);
+}
+
+// ══════════════ 繪製函數 ══════════════
+function drawBg(){
+  ctx.fillStyle='#04080f';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,215,0,0.035)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+function drawHUD(){
+  const ln=countLines(),sc=getScore(ln);
+  const intgBonus=calcAllBonuses(grid);
+  const missionBonus=missionDone&&currentMission?currentMission.bonus:0;
+  const total=sc+intgBonus+missionBonus;
+  ctx.save();ctx.fillStyle='rgba(4,8,24,0.95)';ctx.fillRect(0,0,W,HUD_H);
+  ctx.strokeStyle='rgba(255,215,0,0.22)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,HUD_H);ctx.lineTo(W,HUD_H);ctx.stroke();
+  [['用球數','#ffd700',`${usedBalls}/${MAX_BALLS}`,14,'left'],
+   ['連線','#7fffb0',`${ln}`,W/2,'center'],
+   ['得分','#ffd700',total.toLocaleString(),W-14,'right']
+  ].forEach(([label,col,val,tx,align])=>{
+    ctx.font='10px Arial';ctx.textAlign=align;ctx.textBaseline='top';
+    ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillText(label,tx,8);
+    ctx.font='bold 20px Arial';ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=8;
+    ctx.fillText(val,tx,24);
+  });
+  ctx.restore();
+}
+
+// 整合狀態條（九宮格下方，任務上方）
+function drawIntegrationBar(){
+  const by=MISSION_Y-23;
+  const sectors=[
+    {key:'insurance',label:'保險',color:'#5599ff'},
+    {key:'bank',label:'銀行',color:'#F47920'},
+    {key:'broker',label:'券商',color:'#FFD700'},
+  ];
+  const {achieved,vertical,intl}=checkIntegration(grid);
+  const sw=GRID_W/4;
+  ctx.save();
+  sectors.forEach((sec,i)=>{
+    const done=achieved.includes(sec.key);
+    const litCount=STOCKS.filter(s=>s.sector===sec.key&&grid[STOCKS.indexOf(s)]).length;
+    const x=GRID_LEFT+i*sw;
+    ctx.fillStyle=done?sec.color+'30':'rgba(255,255,255,0.04)';
+    ctx.strokeStyle=done?sec.color:'rgba(255,255,255,0.1)';ctx.lineWidth=done?1.5:0.8;
+    roundRect(ctx,x+2,by,sw-4,17,4);ctx.fill();ctx.stroke();
+    ctx.font=done?'bold 8.5px Arial':'8.5px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=done?sec.color:'rgba(255,255,255,0.38)';
+    if(done){ctx.shadowColor=sec.color;ctx.shadowBlur=6;}
+    ctx.fillText(`${done?'✓ ':''}${sec.label} ${litCount}/3`,x+sw/2,by+8.5);ctx.shadowBlur=0;
+  });
+  // 國際加分欄
+  const ix=GRID_LEFT+sw*3;
+  ctx.fillStyle=intl?'rgba(100,200,255,0.2)':'rgba(255,255,255,0.04)';
+  ctx.strokeStyle=intl?'#88ddff':'rgba(255,255,255,0.1)';ctx.lineWidth=intl?1.5:0.8;
+  roundRect(ctx,ix+2,by,sw-4,17,4);ctx.fill();ctx.stroke();
+  ctx.font=intl?'bold 8.5px Arial':'8.5px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle=intl?'#88ddff':'rgba(255,255,255,0.38)';
+  if(intl){ctx.shadowColor='#88ddff';ctx.shadowBlur=6;}
+  ctx.fillText(intl?'🌐 +20':'🌐 國際',ix+sw/2,by+8.5);ctx.shadowBlur=0;
+  ctx.restore();
+}
+
+function drawGrid(){
+  const gx=GRID_LEFT,gy=GRID_TOP;
+  if(currentMission&&!missionDone&&currentMission.hi.length>0){
+    currentMission.hi.forEach(i=>{if(!grid[i]){const col=i%3,row=Math.floor(i/3);ctx.save();ctx.fillStyle='rgba(255,215,0,0.07)';roundRect(ctx,gx+col*GRID_CELL+2,gy+row*GRID_CELL+2,GRID_CELL-4,GRID_CELL-4,8);ctx.fill();ctx.restore();}});
+  }
+  const {vertical}=checkIntegration(grid);
+  ctx.save();
+  ctx.strokeStyle=vertical?'rgba(255,215,0,0.95)':'rgba(255,215,0,0.4)';
+  ctx.lineWidth=2;ctx.shadowColor=vertical?'#ffd700':'#886600';ctx.shadowBlur=vertical?22:8;
+  roundRect(ctx,gx-4,gy-4,GRID_W+8,GRID_H+8,10);ctx.stroke();ctx.restore();
+
+  for(let i=0;i<9;i++){
+    const col=i%3,row=Math.floor(i/3),cx=gx+col*GRID_CELL,cy=gy+row*GRID_CELL;
+    const st=STOCKS[i],lit=grid[i],flash=flashCells.find(f=>f.idx===i);
+    const {achieved}=checkIntegration(grid);
+    const sectorDone=achieved.includes(st.sector);
+    ctx.save();
+    if(flash){ctx.fillStyle=st.accent+'55';ctx.shadowColor=st.accent;ctx.shadowBlur=24;}
+    else if(lit){ctx.fillStyle=st.bg;ctx.shadowColor=sectorDone?st.accent:'#443300';ctx.shadowBlur=sectorDone?18:10;}
+    else ctx.fillStyle='rgba(8,12,28,0.92)';
+    ctx.strokeStyle=lit?(sectorDone?st.accent:st.accent+'88'):'rgba(255,255,255,0.07)';
+    ctx.lineWidth=lit?(sectorDone?2.5:1.5):0.8;
+    roundRect(ctx,cx+2,cy+2,GRID_CELL-4,GRID_CELL-4,8);ctx.fill();ctx.stroke();ctx.restore();
+
+    // 產業色角標（左上）
+    const sectorCol=SECTOR_COLORS[st.sector];
+    ctx.save();ctx.fillStyle=sectorCol+(lit?'bb':'33');
+    ctx.beginPath();ctx.moveTo(cx+2,cy+2);ctx.lineTo(cx+13,cy+2);ctx.lineTo(cx+2,cy+13);ctx.closePath();ctx.fill();
+    // 國外標記（右上角小點）
+    if(st.origin==='foreign'){
+      ctx.fillStyle=lit?'#88ddff':'rgba(100,180,255,0.3)';
+      ctx.beginPath();ctx.arc(cx+GRID_CELL-8,cy+8,4,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+
+    // LOGO
+    const ar=GRID_CELL*0.28,ax=cx+GRID_CELL/2,ay=cy+GRID_CELL*0.40;
+    ctx.save();ctx.beginPath();ctx.arc(ax,ay,ar,0,Math.PI*2);ctx.fillStyle=lit?st.bg:'#0a0e1c';ctx.fill();
+    ctx.strokeStyle=lit?st.accent:'rgba(255,255,255,0.08)';ctx.lineWidth=lit?1.5:0.8;
+    if(lit){ctx.shadowColor=st.accent;ctx.shadowBlur=8;}ctx.stroke();
+    ctx.beginPath();ctx.arc(ax,ay,ar-1.5,0,Math.PI*2);ctx.clip();
+    const di=STOCK_DEFS.findIndex(d=>d.sym===st.sym);
+    ctx.drawImage(getIcon(di,lit,Math.round(ar*2)),ax-ar+1.5,ay-ar+1.5,ar*2-3,ar*2-3);ctx.restore();
+
+    // 文字
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='top';
+    if(lit){ctx.shadowColor=st.accent;ctx.shadowBlur=5;}
+    ctx.fillStyle=lit?st.accent:'rgba(255,255,255,0.28)';ctx.font='bold 9px Arial';
+    ctx.fillText(st.sym,cx+GRID_CELL/2,cy+GRID_CELL*0.73);
+    ctx.font='7.5px Arial';ctx.shadowBlur=0;
+    ctx.fillStyle=lit?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.15)';
+    ctx.fillText(st.sectorName+(st.origin==='foreign'?'·外':''),cx+GRID_CELL/2,cy+GRID_CELL*0.86);
+    ctx.restore();
+    if(!lit&&!flash){ctx.save();roundRect(ctx,cx+2,cy+2,GRID_CELL-4,GRID_CELL-4,8);ctx.fillStyle='rgba(0,0,0,0.52)';ctx.fill();ctx.restore();}
+  }
+  GRID_LINES.forEach(line=>{
+    if(line.every(i=>grid[i])){
+      const pts=line.map(i=>({x:gx+(i%3)*GRID_CELL+GRID_CELL/2,y:gy+Math.floor(i/3)*GRID_CELL+GRID_CELL/2}));
+      ctx.save();ctx.strokeStyle='rgba(255,240,150,0.85)';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.shadowColor='#ffd700';ctx.shadowBlur=14;
+      ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();ctx.restore();
+    }
+  });
+}
+
+function drawMissionBanner(){
+  if(!currentMission)return;
+  const bx=8,by=MISSION_Y,bw=W-16,bh=MISSION_H;
+  ctx.save();const pulse=missionFlash>0?0.5+0.5*Math.sin(missionFlash*0.25):0;
+  ctx.fillStyle=missionDone?`rgba(20,60,20,${0.88+pulse*.08})`:'rgba(16,12,0,0.88)';
+  ctx.strokeStyle=missionDone?`rgba(120,255,180,${0.6+pulse*.4})`:'rgba(255,215,0,0.45)';
+  ctx.lineWidth=1.5;if(missionDone&&missionFlash>0){ctx.shadowColor='#7fffb0';ctx.shadowBlur=16;}
+  roundRect(ctx,bx,by,bw,bh,6);ctx.fill();ctx.stroke();
+  ctx.font='bold 10px Arial';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillStyle=missionDone?'#7fffb0':'#ffd700';ctx.fillText(missionDone?'✅ 任務達成！':'🎯 任務：',bx+8,by+bh/2);
+  ctx.fillStyle=missionDone?'#aaffcc':'rgba(255,255,255,0.75)';ctx.font='10px Arial';
+  ctx.fillText(`${currentMission.desc}  (+${currentMission.bonus}分)`,bx+66,by+bh/2);ctx.restore();
+}
+
+function drawNails(){
+  NAILS.forEach(n=>{
+    ctx.save();ctx.fillStyle='#aabbcc';ctx.shadowColor='#ccdde8';ctx.shadowBlur=5;
+    ctx.beginPath();ctx.arc(n.x,n.y,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();ctx.arc(n.x-1.5,n.y-1.5,1.8,0,Math.PI*2);ctx.fill();ctx.restore();
+  });
+}
+
+function drawSlots(){
+  for(let i=0;i<COLS;i++){
+    const x=i*SLOT_W,active=slotCounts[i]>0,acc=STOCKS[i].accent;
+    ctx.save();ctx.fillStyle=active?acc+'1e':'rgba(255,255,255,0.02)';
+    ctx.strokeStyle=active?acc:'rgba(255,255,255,0.07)';ctx.lineWidth=1.5;
+    ctx.fillRect(x+2,SLOT_AREA_Y,SLOT_W-4,H-SLOT_AREA_Y-10);ctx.strokeRect(x+2,SLOT_AREA_Y,SLOT_W-4,H-SLOT_AREA_Y-10);
+    ctx.fillStyle=slotCounts[i]>=2?'#ff4444':active?acc:'rgba(255,255,255,0.28)';
+    ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillText(i+1,x+SLOT_W/2,SLOT_AREA_Y+18);
+    if(active){ctx.font='bold 7.5px Arial';ctx.fillStyle=acc;ctx.fillText(STOCKS[i].sym,x+SLOT_W/2,SLOT_AREA_Y+30);}
+    ctx.restore();
+  }
+  ctx.save();ctx.strokeStyle='rgba(255,215,0,0.28)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,SLOT_AREA_Y);ctx.lineTo(W,SLOT_AREA_Y);ctx.stroke();ctx.restore();
+}
+
+function drawBalls(){
+  balls.forEach(b=>{
+    if(b.landed)return;
+    b.trail.forEach((t,i)=>{ctx.save();ctx.globalAlpha=i/b.trail.length*0.28;ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(t.x,t.y,BALL_R*.55,0,Math.PI*2);ctx.fill();ctx.restore();});
+    ctx.save();ctx.shadowColor='#ffaa00';ctx.shadowBlur=20;ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.55)';ctx.beginPath();ctx.arc(b.x-3,b.y-3,4,0,Math.PI*2);ctx.fill();ctx.restore();
+  });
+}
+function drawParticles(){particles.forEach(p=>{ctx.save();ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.restore();});}
+function drawScorePopups(){scorePopups.forEach(s=>{ctx.save();ctx.globalAlpha=Math.min(1,s.life);ctx.font=`bold ${s.big?20:17}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=s.color;ctx.shadowBlur=18;ctx.fillStyle=s.color;ctx.fillText(s.text,s.x,s.y);ctx.restore();});}
+
+function drawCannon(){
+  const tip=getTip();const dx=tip.x-CANNON_X,dy=tip.y-CANNON_BASE_Y;
+  const len=Math.sqrt(dx*dx+dy*dy),ux=dx/len,uy=dy/len,px=-uy,py=ux,hw=6;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,215,0,0.16)';ctx.lineWidth=1;ctx.setLineDash([5,8]);
+  ctx.beginPath();ctx.moveTo(tip.x,tip.y);ctx.lineTo(tip.x+ux*120,tip.y+uy*120);ctx.stroke();ctx.setLineDash([]);
+  ctx.shadowColor='#ffd700';ctx.shadowBlur=16;
+  ctx.fillStyle='#1a1200';ctx.strokeStyle='#ffd700';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(CANNON_X,CANNON_BASE_Y,15,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ffe88a';ctx.beginPath();ctx.arc(CANNON_X,CANNON_BASE_Y,4,0,Math.PI*2);ctx.fill();
+  const grad=ctx.createLinearGradient(CANNON_X+px*hw,CANNON_BASE_Y+py*hw,CANNON_X-px*hw,CANNON_BASE_Y-py*hw);
+  grad.addColorStop(0,'#3a2a00');grad.addColorStop(0.5,'#ffd700');grad.addColorStop(1,'#3a2a00');
+  ctx.fillStyle=grad;ctx.shadowColor='#ffd700';ctx.shadowBlur=18;
+  ctx.beginPath();ctx.moveTo(CANNON_X+px*hw,CANNON_BASE_Y+py*hw);ctx.lineTo(tip.x+px*hw,tip.y+py*hw);ctx.lineTo(tip.x-px*hw,tip.y-py*hw);ctx.lineTo(CANNON_X-px*hw,CANNON_BASE_Y-py*hw);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(255,240,100,0.28)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.shadowColor='#fff';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.ellipse(tip.x,tip.y,4,2.5,Math.atan2(uy,ux),0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawShuffleOverlay(){
+  const t=Math.min(1,(Date.now()-shuffleStart)/3000);
+  ctx.save();ctx.fillStyle='rgba(4,8,24,0.86)';ctx.fillRect(0,0,W,H);
+  ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=18;ctx.fillText('💰 金融市場洗牌中...',W/2,HUD_H/2+6);ctx.shadowBlur=0;
+  shuffleCards.forEach((card,i)=>{
+    const delay=i*0.06,lt=Math.max(0,Math.min(1,(t-delay)/(1-delay+0.01)));
+    const ease=easeOut(lt),x=card.sx+(card.tx-card.sx)*ease,y=card.sy+(card.ty-card.sy)*ease;
+    const rot=card.rot0*(1-ease),scale=0.2+ease*0.8,op=Math.min(1,lt*3);
+    if(op<=0)return;
+    ctx.save();ctx.globalAlpha=op;ctx.translate(x,y);ctx.rotate(rot);ctx.scale(scale,scale);
+    const hw=GRID_CELL/2-3,hh=GRID_CELL/2-3;
+    ctx.fillStyle=card.st.bg;ctx.strokeStyle=card.st.accent;ctx.lineWidth=2;ctx.shadowColor=card.st.accent;ctx.shadowBlur=12;
+    roundRect(ctx,-hw,-hh,hw*2,hh*2,8);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+    const ar=GRID_CELL*0.26,di=STOCK_DEFS.findIndex(d=>d.sym===card.st.sym);
+    ctx.drawImage(getIcon(di,true,Math.round(ar*2)),-ar,-ar-4,ar*2,ar*2);
+    ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=card.st.accent;ctx.fillText(card.st.sym,0,hh*0.42);
+    ctx.restore();
+  });
+  const bx=40,by=H-48,bw=W-80,bh=10;
+  ctx.fillStyle='rgba(255,255,255,0.06)';roundRect(ctx,bx,by,bw,bh,5);ctx.fill();
+  ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=10;roundRect(ctx,bx,by,bw*t,bh,5);ctx.fill();ctx.shadowBlur=0;
+  ctx.font='11px Arial';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='rgba(255,255,255,0.32)';ctx.fillText('洗牌完成後自動開始',W/2,by+bh+6);
+  ctx.restore();
+}
+
+function loop(){
+  update();drawBg();drawHUD();drawGrid();drawIntegrationBar();
+  if(shufflePhase){drawShuffleOverlay();}
+  else{drawCannon();drawMissionBanner();drawNails();drawSlots();drawBalls();drawParticles();drawScorePopups();}
+  requestAnimationFrame(loop);
+}
+C.addEventListener('click',()=>{if(!shufflePhase&&!gameOver)spawnBall();});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!shufflePhase&&!gameOver){e.preventDefault();spawnBall();}});
+</script>
+</body></html>

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Breakout</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#050810;
+  --panel:#0a0f1e;
+  --text:#e8eeff;
+  --muted:#3a4060;
+  --gold:#ffd700;
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Noto Sans TC',sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+/* ── 星點背景 ── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%,rgba(255,255,255,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 35% 72%,rgba(255,255,255,.35) 0%,transparent 100%),
+    radial-gradient(1px 1px at 55% 22%,rgba(255,255,255,.6) 0%,transparent 100%),
+    radial-gradient(1px 1px at 78% 58%,rgba(255,255,255,.4) 0%,transparent 100%),
+    radial-gradient(1px 1px at 88% 12%,rgba(255,255,255,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 22% 88%,rgba(255,255,255,.3) 0%,transparent 100%),
+    radial-gradient(1px 1px at 68% 44%,rgba(255,255,255,.4) 0%,transparent 100%);
+}
+/* ── 頂部 ── */
+header{
+  position:relative;z-index:1;text-align:center;padding:28px 20px 16px;
+}
+.game-title{
+  font-family:'Orbitron',sans-serif;font-weight:900;
+  font-size:clamp(1.4rem,5vw,2rem);letter-spacing:.12em;
+  background:linear-gradient(90deg,#F7931A,#627EEA,#9945FF,#26A17B);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-shadow:none;
+}
+.game-sub{font-size:.75rem;color:var(--muted);letter-spacing:.15em;margin-top:4px;}
+
+/* ── HUD ── */
+#hud{
+  position:relative;z-index:1;
+  display:flex;gap:20px;align-items:center;justify-content:center;
+  padding:6px 20px 10px;width:100%;max-width:480px;
+}
+.hud-box{
+  background:var(--panel);border:1px solid var(--muted);border-radius:10px;
+  padding:6px 16px;text-align:center;min-width:80px;
+}
+.hud-label{font-size:.62rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;}
+.hud-val{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:600;color:var(--gold);margin-top:2px;}
+
+/* ── Canvas wrapper ── */
+#wrap{
+  position:relative;z-index:1;
+}
+canvas{display:block;border-radius:12px;border:1px solid rgba(255,215,0,.12);}
+
+/* ── Overlay ── */
+#overlay{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:rgba(5,8,16,.92);border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;z-index:5;
+}
+#overlay h2{
+  font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;
+  background:linear-gradient(90deg,#F7931A,#627EEA);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+#overlay p{font-size:.85rem;color:#8090b0;text-align:center;max-width:260px;line-height:1.7;}
+.big-score{font-family:'Orbitron',sans-serif;font-size:2.2rem;color:var(--gold);font-weight:900;}
+.ov-btn{
+  padding:12px 36px;border:none;border-radius:10px;cursor:pointer;
+  font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:600;letter-spacing:.08em;
+  background:linear-gradient(135deg,#F7931A,#c8600a);color:#000;
+  transition:transform .15s,opacity .15s;
+}
+.ov-btn:hover{opacity:.88;transform:scale(1.03);}
+.bonus-chip{
+  display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;
+  font-weight:700;letter-spacing:.06em;margin:2px;
+}
+
+/* ── 底部說明 ── */
+#controls{
+  position:relative;z-index:1;
+  font-size:.7rem;color:var(--muted);letter-spacing:.08em;
+  text-align:center;padding:10px 0 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="game-title">₿ CRYPTO BREAKOUT</div>
+  <div class="game-sub">敲爆虛擬貨幣 · 累積財富</div>
+</header>
+
+<div id="hud">
+  <div class="hud-box">
+    <div class="hud-label">分數</div>
+    <div class="hud-val" id="scoreDisplay">0</div>
+  </div>
+  <div class="hud-box">
+    <div class="hud-label">連擊</div>
+    <div class="hud-val" id="comboDisplay">×1</div>
+  </div>
+  <div class="hud-box">
+    <div class="hud-label">生命</div>
+    <div class="hud-val" id="livesDisplay">♦♦♦</div>
+  </div>
+  <div class="hud-box">
+    <div class="hud-label">關卡</div>
+    <div class="hud-val" id="levelDisplay">1</div>
+  </div>
+</div>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="overlay">
+    <h2 id="ovTitle">₿ CRYPTO BREAKOUT</h2>
+    <p id="ovDesc">敲碎所有加密貨幣磚塊<br>連擊越多、獎勵越高！</p>
+    <div id="ovScore" class="big-score" style="display:none"></div>
+    <div id="ovBonuses" style="margin:4px 0;"></div>
+    <button class="ov-btn" id="ovBtn">開始遊戲</button>
+  </div>
+</div>
+
+<div id="controls">← → 移動板子 &nbsp;|&nbsp; 空白鍵 發球 &nbsp;|&nbsp; 行動裝置：左右滑動</div>
+
+<script>
+// ─────────────────────────────────────────
+//  CANVAS 尺寸（手機/桌機自適應）
+// ─────────────────────────────────────────
+const C = document.getElementById('c');
+const ctx = C.getContext('2d');
+const W = Math.min(480, window.innerWidth - 16);
+const H = Math.round(W * 1.45);
+C.width = W; C.height = H;
+document.getElementById('wrap').style.width = W + 'px';
+
+// ─────────────────────────────────────────
+//  加密貨幣定義（顏色 + LOGO 繪製）
+// ─────────────────────────────────────────
+const COINS = [
+  // 每列一種幣，按市值排序
+  { sym:'BTC',  name:'比特幣',  color:'#F7931A', bg:'#2a1200', hp:3, score:30 },
+  { sym:'ETH',  name:'以太幣',  color:'#627EEA', bg:'#0d1230', hp:2, score:20 },
+  { sym:'BNB',  name:'BNB',     color:'#F3BA2F', bg:'#2a2000', hp:2, score:20 },
+  { sym:'SOL',  name:'Solana',  color:'#9945FF', bg:'#1a0a30', hp:2, score:20 },
+  { sym:'XRP',  name:'XRP',     color:'#00A3FF', bg:'#001828', hp:1, score:15 },
+  { sym:'DOGE', name:'狗狗幣',  color:'#C2A633', bg:'#201800', hp:1, score:15 },
+  { sym:'ADA',  name:'Cardano', color:'#0033AD', bg:'#000828', hp:1, score:12 },
+  { sym:'USDT', name:'USDT',    color:'#26A17B', bg:'#001a14', hp:1, score:10 },
+  { sym:'MATIC',name:'Polygon', color:'#8247E5', bg:'#14082a', hp:1, score:12 },
+];
+
+// LOGO 繪製函數（Canvas 2D）
+function drawCoinLogo(ctx, coin, cx, cy, r, lit) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  switch(coin.sym) {
+    case 'BTC': drawBTC(ctx, r, lit); break;
+    case 'ETH': drawETH(ctx, r, lit); break;
+    case 'BNB': drawBNB(ctx, r, lit); break;
+    case 'SOL': drawSOL(ctx, r, lit); break;
+    case 'XRP': drawXRP(ctx, r, lit); break;
+    case 'DOGE': drawDOGE(ctx, r, lit); break;
+    case 'ADA': drawADA(ctx, r, lit); break;
+    case 'USDT': drawUSDT(ctx, r, lit); break;
+    case 'MATIC': drawMATIC(ctx, r, lit); break;
+  }
+  ctx.restore();
+}
+
+// BTC：橘圓底，傾斜B字
+function drawBTC(c,r,lit){
+  const s=r*.75;
+  c.fillStyle=lit?'#F7931A':'#7a4800';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.strokeStyle=lit?'#fff':'#bbb';c.lineWidth=s*.14;c.lineCap='round';
+  c.save();c.rotate(.15);
+  // 豎桿
+  c.beginPath();c.moveTo(-s*.08,-s*.7);c.lineTo(-s*.08,s*.7);c.stroke();
+  // 上半圓
+  c.beginPath();c.moveTo(-s*.08,-s*.55);c.quadraticCurveTo(s*.62,-s*.55,s*.62,-s*.08);c.quadraticCurveTo(s*.62,s*.32,-s*.08,s*.28);c.stroke();
+  // 下半圓
+  c.beginPath();c.moveTo(-s*.08,s*.28);c.quadraticCurveTo(s*.7,s*.28,s*.7,s*.72);c.quadraticCurveTo(s*.7,s*1.1,-s*.08,s*1.0);c.stroke();
+  // 短帽線
+  c.lineWidth=s*.1;
+  c.beginPath();c.moveTo(-s*.25,-s*.78);c.lineTo(s*.12,-s*.78);c.stroke();
+  c.beginPath();c.moveTo(-s*.25,s*1.08);c.lineTo(s*.12,s*1.08);c.stroke();
+  c.restore();
+}
+
+// ETH：藍紫圓底，鑽石形
+function drawETH(c,r,lit){
+  const s=r*.72;
+  c.fillStyle=lit?'#627EEA':'#1a2060';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  // 上三角
+  c.fillStyle=lit?'#fff':'#aaa';
+  c.beginPath();c.moveTo(0,-s);c.lineTo(-s*.58,s*.1);c.lineTo(s*.58,s*.1);c.closePath();c.fill();
+  // 下三角
+  c.fillStyle=lit?'rgba(255,255,255,.6)':'rgba(150,150,150,.5)';
+  c.beginPath();c.moveTo(0,s*.88);c.lineTo(-s*.58,s*.24);c.lineTo(s*.58,s*.24);c.closePath();c.fill();
+  // 中間分割線（造成立體感）
+  c.fillStyle=lit?'rgba(255,255,255,.85)':'rgba(180,180,180,.7)';
+  c.beginPath();c.moveTo(0,-s);c.lineTo(-s*.58,s*.1);c.lineTo(0,s*.34);c.lineTo(s*.58,s*.1);c.closePath();c.fill();
+}
+
+// BNB：黃圓底，旋轉菱形
+function drawBNB(c,r,lit){
+  const s=r*.68;
+  c.fillStyle=lit?'#F3BA2F':'#7a5c10';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.save();c.rotate(Math.PI/4);
+  // 中心菱形
+  c.fillStyle=lit?'#1a1000':'#0a0800';
+  c.beginPath();c.rect(-s*.26,-s*.26,s*.52,s*.52);c.fill();
+  // 四個角落小菱形
+  [[-s*.62,-s*.62],[s*.62,-s*.62],[s*.62,s*.62],[-s*.62,s*.62]].forEach(([x,y])=>{
+    c.beginPath();c.rect(x-s*.2,y-s*.2,s*.4,s*.4);c.fill();
+  });
+  // 連接橫條
+  c.fillRect(-s*.9,-s*.12,s*1.8,s*.24);
+  c.fillRect(-s*.12,-s*.9,s*.24,s*1.8);
+  c.restore();
+}
+
+// SOL：紫漸層圓底，三條平行四邊形
+function drawSOL(c,r,lit){
+  const s=r*.9;
+  c.fillStyle=lit?'#9945FF':'#2a1050';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  const g=c.createLinearGradient(-s*.5,-s*.5,s*.5,s*.5);
+  g.addColorStop(0,lit?'#14F195':'#0a6040');g.addColorStop(1,lit?'#9945FF':'#2a1050');
+  c.fillStyle=g;
+  const bars=[-s*.42,-s*.12,s*.18];
+  bars.forEach((y,i)=>{
+    const w=s*.85, h=s*.2, skew=s*.12;
+    c.beginPath();
+    c.moveTo(-w/2+skew,y);c.lineTo(w/2+skew,y);
+    c.lineTo(w/2-skew,y+h);c.lineTo(-w/2-skew,y+h);
+    c.closePath();c.fill();
+  });
+}
+
+// XRP：藍圓底，X造型
+function drawXRP(c,r,lit){
+  const s=r*.68;
+  c.fillStyle=lit?'#00A3FF':'#001828';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.strokeStyle=lit?'#fff':'#aaa';c.lineWidth=s*.22;c.lineCap='round';
+  c.beginPath();c.moveTo(-s,-s*1.0);c.lineTo(-s*.15,-s*.15);c.stroke();
+  c.beginPath();c.moveTo(s,-s*1.0);c.lineTo(s*.15,-s*.15);c.stroke();
+  c.beginPath();c.moveTo(-s*.15,-s*.15);c.lineTo(s*.15,-s*.15);c.stroke();
+  c.beginPath();c.moveTo(-s,s*1.0);c.lineTo(-s*.15,s*.15);c.stroke();
+  c.beginPath();c.moveTo(s,s*1.0);c.lineTo(s*.15,s*.15);c.stroke();
+  c.beginPath();c.moveTo(-s*.15,s*.15);c.lineTo(s*.15,s*.15);c.stroke();
+  // 簡化：直接畫X
+  c.beginPath();c.moveTo(-s,-s);c.lineTo(s,s);c.stroke();
+  c.beginPath();c.moveTo(s,-s);c.lineTo(-s,s);c.stroke();
+}
+
+// DOGE：金黃圓底，D字+狗耳
+function drawDOGE(c,r,lit){
+  const s=r*.75;
+  c.fillStyle=lit?'#C2A633':'#5a4a10';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.strokeStyle=lit?'#fff':'#ccc';c.lineWidth=s*.14;c.lineCap='round';
+  // D字
+  c.beginPath();c.moveTo(-s*.3,-s*.7);c.lineTo(-s*.3,s*.7);c.stroke();
+  c.beginPath();c.moveTo(-s*.3,-s*.7);c.quadraticCurveTo(s*.9,-s*.7,s*.9,0);
+  c.quadraticCurveTo(s*.9,s*.7,-s*.3,s*.7);c.stroke();
+  // 中橫線（DOGE特色）
+  c.beginPath();c.moveTo(-s*.15,0);c.lineTo(s*.55,0);c.stroke();
+}
+
+// ADA：深藍圓底，菊花形（Cardano特色多邊形）
+function drawADA(c,r,lit){
+  const s=r*.8;
+  c.fillStyle=lit?'#0033AD':'#000828';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.fillStyle=lit?'#fff':'#aaa';
+  // 中心點
+  c.beginPath();c.arc(0,0,s*.12,0,Math.PI*2);c.fill();
+  // 外圍點（8個，ADA的花形）
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4;const rr=s*.58;
+    c.beginPath();c.arc(Math.cos(a)*rr,Math.sin(a)*rr,s*.09,0,Math.PI*2);c.fill();
+  }
+  // 中圈點（8個）
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4+Math.PI/8;const rr=s*.32;
+    c.fillStyle=lit?'rgba(255,255,255,.6)':'rgba(150,150,150,.5)';
+    c.beginPath();c.arc(Math.cos(a)*rr,Math.sin(a)*rr,s*.065,0,Math.PI*2);c.fill();
+  }
+}
+
+// USDT：綠圓底，₮符號
+function drawUSDT(c,r,lit){
+  const s=r*.72;
+  c.fillStyle=lit?'#26A17B':'#0a3028';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.strokeStyle=lit?'#fff':'#ccc';c.lineWidth=s*.16;c.lineCap='round';
+  // 頂橫線
+  c.beginPath();c.moveTo(-s*.7,-s*.62);c.lineTo(s*.7,-s*.62);c.stroke();
+  // 豎桿
+  c.lineWidth=s*.18;
+  c.beginPath();c.moveTo(0,-s*.62);c.lineTo(0,s*.7);c.stroke();
+  // 中橫短線
+  c.lineWidth=s*.13;
+  c.beginPath();c.moveTo(-s*.42,-s*.02);c.lineTo(s*.42,-s*.02);c.stroke();
+}
+
+// MATIC/POL：紫圓底，抽象多邊形框架
+function drawMATIC(c,r,lit){
+  const s=r*.8;
+  c.fillStyle=lit?'#8247E5':'#200850';
+  c.beginPath();c.arc(0,0,r*.92,0,Math.PI*2);c.fill();
+  c.strokeStyle=lit?'#fff':'#bbb';c.lineWidth=s*.12;c.lineCap='round';c.lineJoin='round';
+  // 六邊形
+  const pts=[];for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/6;pts.push([Math.cos(a)*s*.72,Math.sin(a)*s*.72]);}
+  c.beginPath();c.moveTo(pts[0][0],pts[0][1]);pts.forEach(p=>c.lineTo(p[0],p[1]));c.closePath();c.stroke();
+  // 內部M形
+  c.lineWidth=s*.1;
+  c.beginPath();c.moveTo(-s*.4,s*.2);c.lineTo(-s*.4,-s*.3);c.lineTo(0,s*.2);c.lineTo(s*.4,-s*.3);c.lineTo(s*.4,s*.2);c.stroke();
+}
+
+// ─────────────────────────────────────────
+//  遊戲參數
+// ─────────────────────────────────────────
+const PAD_H = Math.round(H * 0.028);
+const PAD_W_BASE = Math.round(W * 0.22);
+const BALL_R = Math.round(W * 0.025);
+const BRICK_ROWS = 9;
+const BRICK_COLS = 7;
+const BRICK_GAP = 4;
+const BRICK_TOP = Math.round(H * 0.06);
+const BRICKH = Math.round((H * 0.46) / BRICK_ROWS);
+const BRICKW = Math.round((W - BRICK_GAP * (BRICK_COLS + 1)) / BRICK_COLS);
+
+// ─────────────────────────────────────────
+//  遊戲狀態
+// ─────────────────────────────────────────
+let state = 'idle'; // idle | playing | paused | dead | win | gameover
+let score = 0, lives = 3, level = 1, combo = 1, maxCombo = 1;
+let bricks = [], ball = {}, pad = {}, particles = [], scorePopups = [], bonuses = [];
+let animId = null, lastTime = 0;
+let padTarget = W / 2;
+let levelBonuses = [];
+
+function initLevel() {
+  const row_assign = Array.from({length:BRICK_ROWS},(_,i)=>COINS[i % COINS.length]);
+  bricks = [];
+  for (let r = 0; r < BRICK_ROWS; r++) {
+    for (let c = 0; c < BRICK_COLS; c++) {
+      const coin = row_assign[r];
+      const x = BRICK_GAP + c * (BRICKW + BRICK_GAP);
+      const y = BRICK_TOP + r * (BRICKH + BRICK_GAP);
+      bricks.push({ x, y, w: BRICKW, h: BRICKH, coin, hp: coin.hp + Math.floor((level-1)*.5), maxHp: coin.hp + Math.floor((level-1)*.5), alive: true, flashLife: 0 });
+    }
+  }
+  const padW = Math.max(60, PAD_W_BASE - (level - 1) * 8);
+  pad = { x: W/2 - padW/2, y: H - PAD_H - 14, w: padW, h: PAD_H };
+  resetBall();
+  combo = 1; maxCombo = 1; particles = []; scorePopups = []; levelBonuses = [];
+}
+
+function resetBall() {
+  ball = {
+    x: W / 2, y: pad.y - BALL_R - 2,
+    vx: (Math.random() > .5 ? 1 : -1) * (3.5 + level * .4),
+    vy: -(4 + level * .4),
+    attached: true
+  };
+}
+
+function initGame() {
+  score = 0; lives = 3; level = 1; bonuses = [];
+  initLevel();
+}
+
+// ─────────────────────────────────────────
+//  粒子 + 彈出分數
+// ─────────────────────────────────────────
+function spawnParticles(x, y, color, n = 18) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 4.5;
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, color, r: 1.5+Math.random()*2.5 });
+  }
+}
+
+function spawnPopup(x, y, text, color) {
+  scorePopups.push({ x, y, text, color, life: 1.5, vy: -1.2 });
+}
+
+// ─────────────────────────────────────────
+//  更新邏輯
+// ─────────────────────────────────────────
+function update(dt) {
+  // 更新板子
+  pad.x += (padTarget - (pad.x + pad.w/2)) * 0.18;
+  pad.x = Math.max(0, Math.min(W - pad.w, pad.x));
+
+  // 球跟著板子
+  if (ball.attached) {
+    ball.x = pad.x + pad.w / 2;
+    ball.y = pad.y - BALL_R - 2;
+    return;
+  }
+
+  // 移動球
+  const spd = Math.sqrt(ball.vx**2 + ball.vy**2);
+  const maxSpd = 10 + level * .8;
+  if (spd > maxSpd) { ball.vx *= maxSpd/spd; ball.vy *= maxSpd/spd; }
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // 左右牆
+  if (ball.x - BALL_R < 0) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
+  if (ball.x + BALL_R > W) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
+  // 頂牆
+  if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+
+  // 球落底
+  if (ball.y - BALL_R > H) {
+    lives--;
+    combo = 1;
+    updateHUD();
+    if (lives <= 0) { endGame(false); return; }
+    resetBall();
+    return;
+  }
+
+  // 球碰板
+  if (ball.vy > 0 &&
+      ball.x > pad.x && ball.x < pad.x + pad.w &&
+      ball.y + BALL_R >= pad.y && ball.y - BALL_R <= pad.y + pad.h) {
+    ball.vy = -Math.abs(ball.vy);
+    // 板面位置影響角度
+    const rel = (ball.x - (pad.x + pad.w/2)) / (pad.w/2);
+    ball.vx = rel * (5 + level * .5);
+    if (Math.abs(ball.vx) < .5) ball.vx = ball.vx >= 0 ? .5 : -.5;
+    combo = 1;
+    spawnParticles(ball.x, pad.y, '#ffffff', 6);
+  }
+
+  // 球碰磚塊
+  for (const b of bricks) {
+    if (!b.alive) continue;
+    if (ball.x + BALL_R < b.x || ball.x - BALL_R > b.x + b.w) continue;
+    if (ball.y + BALL_R < b.y || ball.y - BALL_R > b.y + b.h) continue;
+
+    // 確定碰撞面
+    const overlapL = (ball.x + BALL_R) - b.x;
+    const overlapR = (b.x + b.w) - (ball.x - BALL_R);
+    const overlapT = (ball.y + BALL_R) - b.y;
+    const overlapB = (b.y + b.h) - (ball.y - BALL_R);
+    const minH = Math.min(overlapL, overlapR);
+    const minV = Math.min(overlapT, overlapB);
+    if (minH < minV) ball.vx *= -1; else ball.vy *= -1;
+
+    b.hp--;
+    b.flashLife = 1;
+    spawnParticles(ball.x, ball.y, b.coin.color, 10);
+
+    if (b.hp <= 0) {
+      b.alive = false;
+      const pts = b.coin.score * combo * level;
+      score += pts;
+      spawnPopup(b.x + b.w/2, b.y, `+${pts}`, b.coin.color);
+      spawnParticles(b.x + b.w/2, b.y + b.h/2, b.coin.color, 22);
+      combo = Math.min(combo + 1, 16);
+      if (combo > maxCombo) maxCombo = combo;
+      updateHUD();
+    }
+    break;
+  }
+
+  // 更新粒子
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.08; p.life-=.025; });
+  particles = particles.filter(p=>p.life>0);
+  scorePopups.forEach(s=>{ s.y+=s.vy; s.life-=.018; });
+  scorePopups = scorePopups.filter(s=>s.life>0);
+  bricks.forEach(b=>{ if(b.flashLife>0) b.flashLife-=.06; });
+
+  // 清關？
+  if (bricks.every(b => !b.alive)) {
+    const levelBonus = level * 200;
+    const comboBonus = maxCombo * 50;
+    score += levelBonus + comboBonus;
+    bonuses.push({ text: `第${level}關完成`, pts: levelBonus, color: '#ffd700' });
+    bonuses.push({ text: `最高連擊×${maxCombo}`, pts: comboBonus, color: '#9945FF' });
+    level++;
+    if (level > 5) { endGame(true); return; }
+    initLevel();
+    updateHUD();
+  }
+}
+
+// ─────────────────────────────────────────
+//  繪製
+// ─────────────────────────────────────────
+function draw() {
+  // 背景
+  ctx.fillStyle = '#050810';
+  ctx.fillRect(0, 0, W, H);
+
+  // 格線氛圍
+  ctx.strokeStyle = 'rgba(255,215,0,.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // 磚塊
+  for (const b of bricks) {
+    if (!b.alive) continue;
+    const frac = b.flashLife;
+    const lit = frac > 0;
+    // 磚塊背景
+    ctx.save();
+    ctx.fillStyle = lit ? b.coin.color + '55' : b.coin.bg;
+    ctx.shadowColor = lit ? b.coin.color : 'transparent';
+    ctx.shadowBlur = lit ? 14 : 0;
+    roundRect(ctx, b.x+1, b.y+1, b.w-2, b.h-2, 5);
+    ctx.fill();
+    // 邊框
+    ctx.strokeStyle = b.coin.color + (b.hp < b.maxHp ? '99' : 'cc');
+    ctx.lineWidth = 1.2;
+    roundRect(ctx, b.x+1, b.y+1, b.w-2, b.h-2, 5);
+    ctx.stroke();
+    ctx.restore();
+
+    // HP條（多血量磚塊）
+    if (b.maxHp > 1) {
+      const bw = (b.w - 8) * (b.hp / b.maxHp);
+      ctx.fillStyle = 'rgba(0,0,0,.4)';
+      ctx.fillRect(b.x+4, b.y+b.h-5, b.w-8, 3);
+      ctx.fillStyle = b.coin.color;
+      ctx.fillRect(b.x+4, b.y+b.h-5, bw, 3);
+    }
+
+    // LOGO
+    const logoR = Math.min(b.w, b.h) * .3;
+    drawCoinLogo(ctx, b.coin, b.x + b.w/2, b.y + b.h/2, logoR, lit);
+
+    // 符號文字
+    ctx.save();
+    ctx.font = `bold ${Math.min(b.h*.24, 11)}px 'Orbitron',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = b.coin.color + (b.hp < b.maxHp ? '88' : 'cc');
+    ctx.fillText(b.coin.sym, b.x + b.w/2, b.y + b.h - 4);
+    ctx.restore();
+  }
+
+  // 球尾跡
+  ctx.save();
+  ctx.fillStyle = '#ffd700';
+  ctx.shadowColor = '#ffa000';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+  ctx.fill();
+  // 高光
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  ctx.beginPath();
+  ctx.arc(ball.x - BALL_R*.3, ball.y - BALL_R*.3, BALL_R*.35, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // 板子
+  ctx.save();
+  const padGrad = ctx.createLinearGradient(pad.x, pad.y, pad.x, pad.y + pad.h);
+  padGrad.addColorStop(0, '#ffd700');
+  padGrad.addColorStop(1, '#c86000');
+  ctx.fillStyle = padGrad;
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = 16;
+  roundRect(ctx, pad.x, pad.y, pad.w, pad.h, 6);
+  ctx.fill();
+  ctx.restore();
+
+  // 粒子
+  particles.forEach(p=>{
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // 分數彈出
+  scorePopups.forEach(s=>{
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, s.life);
+    ctx.font = `bold ${Math.min(s.text.length > 4 ? 12 : 14, 15)}px 'Orbitron',sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = s.color;
+    ctx.shadowColor = s.color;
+    ctx.shadowBlur = 10;
+    ctx.fillText(s.text, s.x, s.y);
+    ctx.restore();
+  });
+
+  // 連擊條
+  if (combo >= 3) {
+    const comboColors = ['#F7931A','#F3BA2F','#9945FF','#627EEA','#26A17B'];
+    const cc = comboColors[Math.min(Math.floor(combo/3), comboColors.length-1)];
+    ctx.save();
+    ctx.font = `900 ${14 + combo}px 'Orbitron',sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = cc;
+    ctx.shadowColor = cc;
+    ctx.shadowBlur = 20;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(`×${combo} COMBO!`, W/2, H - 40);
+    ctx.restore();
+  }
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x+r, y); c.lineTo(x+w-r, y); c.quadraticCurveTo(x+w, y, x+w, y+r);
+  c.lineTo(x+w, y+h-r); c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  c.lineTo(x+r, y+h); c.quadraticCurveTo(x, y+h, x, y+h-r);
+  c.lineTo(x, y+r); c.quadraticCurveTo(x, y, x+r, y);
+  c.closePath();
+}
+
+// ─────────────────────────────────────────
+//  主迴圈
+// ─────────────────────────────────────────
+function loop(ts) {
+  if (state !== 'playing') return;
+  const dt = Math.min((ts - lastTime) / 16.67, 3);
+  lastTime = ts;
+  update(dt);
+  draw();
+  animId = requestAnimationFrame(loop);
+}
+
+// ─────────────────────────────────────────
+//  結束 / 過關
+// ─────────────────────────────────────────
+function endGame(win) {
+  state = win ? 'win' : 'gameover';
+  cancelAnimationFrame(animId);
+  draw();
+
+  const ov = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ovTitle');
+  const ovDesc = document.getElementById('ovDesc');
+  const ovScore = document.getElementById('ovScore');
+  const ovBonuses = document.getElementById('ovBonuses');
+  const ovBtn = document.getElementById('ovBtn');
+
+  ovTitle.textContent = win ? '🏆 挑戰完成！' : '💸 爆倉了！';
+  ovDesc.textContent = win ? '恭喜通關全部5關！你的加密財富爆炸！' : '別氣餒，加密市場永遠有下一次機會！';
+  ovScore.style.display = 'block';
+  ovScore.textContent = score.toLocaleString() + ' pts';
+
+  let html = '';
+  bonuses.forEach(b => {
+    html += `<span class="bonus-chip" style="background:${b.color}22;color:${b.color};border:1px solid ${b.color}55">${b.text} +${b.pts}</span>`;
+  });
+  if (maxCombo > 1) {
+    html += `<span class="bonus-chip" style="background:#9945ff22;color:#9945FF;border:1px solid #9945ff55">最高連擊 ×${maxCombo}</span>`;
+  }
+  ovBonuses.innerHTML = html;
+  ovBtn.textContent = '再玩一次';
+  ovBtn.onclick = () => { startGame(); };
+  ov.style.display = 'flex';
+}
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  initGame();
+  updateHUD();
+  state = 'playing';
+  lastTime = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+function updateHUD() {
+  document.getElementById('scoreDisplay').textContent = score.toLocaleString();
+  document.getElementById('comboDisplay').textContent = '×' + combo;
+  document.getElementById('livesDisplay').textContent = '♦'.repeat(lives) + '◇'.repeat(Math.max(0, 3 - lives));
+  document.getElementById('levelDisplay').textContent = level;
+}
+
+// ─────────────────────────────────────────
+//  控制
+// ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (state !== 'playing') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (ball.attached) ball.attached = false;
+  }
+  if (e.code === 'ArrowLeft') padTarget = pad.x - 30;
+  if (e.code === 'ArrowRight') padTarget = pad.x + pad.w + 30;
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') padTarget = pad.x + pad.w/2;
+});
+
+// 觸控
+let touchX = null;
+C.addEventListener('touchstart', e => { e.preventDefault(); touchX = e.touches[0].clientX; }, {passive:false});
+C.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (state === 'playing') {
+    const rect = C.getBoundingClientRect();
+    const tx = (e.touches[0].clientX - rect.left) * (W / rect.width);
+    padTarget = tx;
+    if (ball.attached) ball.attached = false;
+  }
+}, {passive:false});
+
+// 滑鼠
+C.addEventListener('mousemove', e => {
+  if (state !== 'playing') return;
+  const rect = C.getBoundingClientRect();
+  padTarget = (e.clientX - rect.left) * (W / rect.width);
+});
+C.addEventListener('click', () => {
+  if (state === 'playing' && ball.attached) ball.attached = false;
+});
+
+// 設定按鈕
+document.getElementById('ovBtn').onclick = () => { startGame(); };
+</script>
+</body>
+</html>

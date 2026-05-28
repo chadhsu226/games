@@ -13,6 +13,8 @@
     --yellow: #ffe44d;
     --green: #7fffb0;
     --purple: #a855f7;
+    --gold: #ffd700;
+    --orange: #F7931A;
     --text: #e8e8ff;
     --muted: #6666aa;
   }
@@ -27,11 +29,10 @@
     overflow-x: hidden;
   }
 
-  /* ── Stars background ── */
+  /* ── Stars ── */
   body::before {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background-image:
       radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
       radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
@@ -43,96 +44,62 @@
       radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
       radial-gradient(1px 1px at 40% 90%, rgba(255,255,255,0.6) 0%, transparent 100%),
       radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,0.4) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 0;
+    pointer-events: none; z-index: 0;
   }
 
   /* ── Header ── */
   header {
-    position: relative;
-    z-index: 1;
+    position: relative; z-index: 1;
     text-align: center;
     padding: 70px 20px 50px;
   }
-
   .glow-ring {
-    display: inline-block;
-    font-size: 3rem;
-    margin-bottom: 16px;
+    display: inline-block; font-size: 3rem; margin-bottom: 16px;
     filter: drop-shadow(0 0 20px var(--pink));
     animation: pulse 3s ease-in-out infinite;
   }
   @keyframes pulse {
     0%, 100% { filter: drop-shadow(0 0 20px var(--pink)); }
-    50% { filter: drop-shadow(0 0 35px var(--purple)); }
+    50%       { filter: drop-shadow(0 0 35px var(--purple)); }
   }
-
   h1 {
     font-family: 'Orbitron', sans-serif;
     font-size: clamp(1.8rem, 6vw, 3rem);
-    font-weight: 900;
-    letter-spacing: 0.05em;
+    font-weight: 900; letter-spacing: 0.05em;
     background: linear-gradient(135deg, var(--pink), var(--yellow), var(--green));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     margin-bottom: 12px;
   }
-
-  .tagline {
-    font-size: 0.88rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    font-weight: 300;
-  }
+  .tagline { font-size: 0.88rem; color: var(--muted); letter-spacing: 0.1em; font-weight: 300; }
 
   /* ── Divider ── */
   .divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    max-width: 700px;
-    margin: 0 auto 40px;
-    padding: 0 24px;
+    display: flex; align-items: center; gap: 16px;
+    max-width: 900px; margin: 0 auto 40px; padding: 0 24px;
   }
   .divider::before, .divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--muted));
+    content: ''; flex: 1; height: 1px;
   }
-  .divider::after {
-    background: linear-gradient(to left, transparent, var(--muted));
-  }
-  .divider span {
-    font-size: 0.68rem;
-    letter-spacing: 0.2em;
-    color: var(--muted);
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
+  .divider::before { background: linear-gradient(to right, transparent, var(--muted)); }
+  .divider::after  { background: linear-gradient(to left,  transparent, var(--muted)); }
+  .divider span { font-size: 0.68rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
 
-  /* ── Game Grid ── */
+  /* ── Grid ── */
   .grid {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 0 auto;
+    position: relative; z-index: 1;
+    max-width: 900px; margin: 0 auto;
     padding: 0 24px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
   }
 
-  /* ── Game Card ── */
+  /* ── Card ── */
   .card {
     background: var(--bg2);
     border: 1px solid rgba(255,105,180,0.2);
-    border-radius: 16px;
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    display: block;
+    border-radius: 16px; overflow: hidden;
+    text-decoration: none; color: inherit; display: block;
     transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
     position: relative;
   }
@@ -141,136 +108,136 @@
     border-color: var(--pink);
     box-shadow: 0 8px 40px rgba(255,105,180,0.2), 0 0 0 1px rgba(255,105,180,0.1);
   }
+  /* 金融卡片 hover */
+  .card.gold:hover {
+    border-color: var(--gold);
+    box-shadow: 0 8px 40px rgba(255,215,0,0.2), 0 0 0 1px rgba(255,215,0,0.1);
+  }
+  /* 加密卡片 hover */
+  .card.crypto:hover {
+    border-color: var(--orange);
+    box-shadow: 0 8px 40px rgba(247,147,26,0.2), 0 0 0 1px rgba(247,147,26,0.1);
+  }
 
+  /* ── Card Preview ── */
   .card-preview {
     height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
   }
   .card-preview.marble {
     background: radial-gradient(ellipse at 30% 40%, #1a0a2e 0%, #060612 70%);
   }
+  .card-preview.finance {
+    background: radial-gradient(ellipse at 60% 40%, #0a0f1e 0%, #04080f 70%);
+  }
+  .card-preview.crypto {
+    background: radial-gradient(ellipse at 40% 50%, #0d0a00 0%, #050810 70%);
+  }
 
-  /* Animated preview for marble bingo */
+  /* Marble preview dots */
+  .preview-dots {
+    position: absolute; inset: 0;
+    display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(3, 1fr);
+    gap: 4px; padding: 16px; opacity: 0.25;
+  }
+  .dot { border-radius: 50%; background: var(--pink); }
+  .dot:nth-child(3n+1) { background: var(--yellow); }
+  .dot:nth-child(3n+2) { background: var(--green); }
+
+  /* Finance preview mini grid */
+  .preview-finance-grid {
+    position: absolute; inset: 0;
+    display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr);
+    gap: 5px; padding: 18px; opacity: 0.22;
+  }
+  .fg-cell { border-radius: 6px; }
+  .fg-cell:nth-child(1){background:#5599ff;} .fg-cell:nth-child(2){background:#F47920;} .fg-cell:nth-child(3){background:#00A651;}
+  .fg-cell:nth-child(4){background:#F47920;} .fg-cell:nth-child(5){background:#FFD700;} .fg-cell:nth-child(6){background:#4488ff;}
+  .fg-cell:nth-child(7){background:#FFD700;} .fg-cell:nth-child(8){background:#5580ff;} .fg-cell:nth-child(9){background:#F47920;}
+
+  /* Crypto preview coins */
+  .preview-coins {
+    position: absolute; inset: 0;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 8px; padding: 18px; opacity: 0.28;
+  }
+  .coin-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: 900; font-family: 'Orbitron', sans-serif; color: #000;
+  }
+
   .preview-icon {
     font-size: 4rem;
     animation: float 4s ease-in-out infinite;
     filter: drop-shadow(0 0 16px var(--pink));
+    position: relative; z-index: 1;
   }
+  .preview-icon.gold-glow  { filter: drop-shadow(0 0 16px var(--gold)); }
+  .preview-icon.crypto-glow{ filter: drop-shadow(0 0 16px var(--orange)); }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  .preview-dots {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 4px;
-    padding: 16px;
-    opacity: 0.25;
-  }
-  .dot {
-    border-radius: 50%;
-    background: var(--pink);
-  }
-  .dot:nth-child(3n+1) { background: var(--yellow); }
-  .dot:nth-child(3n+2) { background: var(--green); }
-
-  .badge-new {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: var(--pink);
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    padding: 3px 8px;
-    border-radius: 20px;
-    text-transform: uppercase;
+    50%       { transform: translateY(-10px); }
   }
 
+  /* Badges */
+  .badge {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 8px; border-radius: 20px; text-transform: uppercase; color: #fff;
+  }
+  .badge-new  { background: var(--pink); }
+  .badge-v2   { background: var(--gold); color: #000; }
+  .badge-hot  { background: var(--orange); color: #000; }
+
+  /* Card body */
   .card-body { padding: 20px 22px 22px; }
-
   .game-name {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--yellow);
-    margin-bottom: 8px;
-    letter-spacing: 0.05em;
+    font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 600;
+    margin-bottom: 8px; letter-spacing: 0.05em;
   }
+  .game-name.pink   { color: var(--yellow); }
+  .game-name.gold   { color: var(--gold); }
+  .game-name.crypto { color: var(--orange); }
 
-  .game-desc {
-    font-size: 0.82rem;
-    color: var(--muted);
-    line-height: 1.65;
-    margin-bottom: 16px;
-    font-weight: 300;
-  }
+  .game-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.65; margin-bottom: 16px; font-weight: 300; }
 
-  .tags {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .tag {
-    font-size: 0.68rem;
-    padding: 3px 9px;
-    border-radius: 20px;
-    border: 1px solid;
-    letter-spacing: 0.05em;
-  }
-  .tag-pink { color: var(--pink); border-color: rgba(255,105,180,0.4); }
-  .tag-green { color: var(--green); border-color: rgba(127,255,176,0.4); }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; border: 1px solid; letter-spacing: 0.05em; }
+  .tag-pink   { color: var(--pink);   border-color: rgba(255,105,180,0.4); }
+  .tag-green  { color: var(--green);  border-color: rgba(127,255,176,0.4); }
   .tag-yellow { color: var(--yellow); border-color: rgba(255,228,77,0.4); }
+  .tag-gold   { color: var(--gold);   border-color: rgba(255,215,0,0.4); }
+  .tag-orange { color: var(--orange); border-color: rgba(247,147,26,0.4); }
+  .tag-blue   { color: #88aaff;       border-color: rgba(100,140,255,0.4); }
+  .tag-purple { color: #c084fc;       border-color: rgba(192,132,252,0.4); }
 
   .play-btn {
-    display: block;
-    margin-top: 16px;
-    text-align: center;
-    padding: 10px;
-    background: linear-gradient(135deg, #ff69b4, #c040a0);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: white;
-    letter-spacing: 0.05em;
+    display: block; margin-top: 16px; text-align: center; padding: 10px;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: white; letter-spacing: 0.05em;
     transition: opacity 0.2s;
   }
+  .play-btn.pink   { background: linear-gradient(135deg, #ff69b4, #c040a0); }
+  .play-btn.gold   { background: linear-gradient(135deg, #ffd700, #c87000); color: #000; }
+  .play-btn.crypto { background: linear-gradient(135deg, #F7931A, #c86000); color: #000; }
   .card:hover .play-btn { opacity: 0.85; }
 
-  /* ── Coming Soon Card ── */
+  /* ── Coming Soon ── */
   .card-coming {
-    background: var(--bg2);
-    border: 1px dashed rgba(102,102,170,0.3);
-    border-radius: 16px;
-    padding: 40px 22px;
-    text-align: center;
-    color: var(--muted);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 260px;
+    background: var(--bg2); border: 1px dashed rgba(102,102,170,0.3); border-radius: 16px;
+    padding: 40px 22px; text-align: center; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; min-height: 260px;
   }
   .card-coming .plus { font-size: 2rem; opacity: 0.3; }
   .card-coming p { font-size: 0.82rem; }
 
   /* ── Footer ── */
   footer {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 50px 20px 30px;
-    font-size: 0.75rem;
-    color: var(--muted);
+    position: relative; z-index: 1;
+    text-align: center; padding: 50px 20px 30px;
+    font-size: 0.75rem; color: var(--muted);
   }
 </style>
 </head>
@@ -286,7 +253,31 @@
 
 <div class="grid">
 
-  <!-- Marble Bingo -->
+  <!-- 1. Marble Bingo v2（金融大富翁） -->
+  <a href="marble-bingo-v2.html" class="card gold">
+    <div class="card-preview finance">
+      <div class="preview-finance-grid">
+        <div class="fg-cell"></div><div class="fg-cell"></div><div class="fg-cell"></div>
+        <div class="fg-cell"></div><div class="fg-cell"></div><div class="fg-cell"></div>
+        <div class="fg-cell"></div><div class="fg-cell"></div><div class="fg-cell"></div>
+      </div>
+      <div class="preview-icon gold-glow">💰</div>
+      <span class="badge badge-v2">V2</span>
+    </div>
+    <div class="card-body">
+      <div class="game-name gold">MARBLE BINGO</div>
+      <div class="game-desc">金融大富翁版！發射彈珠點亮台灣金融機構，完成水平整合、垂直整合拿大獎。</div>
+      <div class="tags">
+        <span class="tag tag-gold">射擊</span>
+        <span class="tag tag-green">單人</span>
+        <span class="tag tag-blue">金融</span>
+        <span class="tag tag-yellow">益智</span>
+      </div>
+      <div class="play-btn gold">▶ 開始遊戲</div>
+    </div>
+  </a>
+
+  <!-- 2. Marble Bingo v1（原版） -->
   <a href="marble-bingo.html" class="card">
     <div class="card-preview marble">
       <div class="preview-dots">
@@ -301,26 +292,50 @@
         <div class="dot"></div><div class="dot"></div><div class="dot"></div>
       </div>
       <div class="preview-icon">🔮</div>
-      <span class="badge-new">New</span>
     </div>
     <div class="card-body">
-      <div class="game-name">MARBLE BINGO</div>
+      <div class="game-name pink">MARBLE BINGO</div>
       <div class="game-desc">發射彈珠、連線得分！湊成一排就是 BINGO。考驗你的瞄準技巧與策略。</div>
       <div class="tags">
         <span class="tag tag-pink">射擊</span>
         <span class="tag tag-green">單人</span>
         <span class="tag tag-yellow">益智</span>
       </div>
-      <div class="play-btn">▶ 開始遊戲</div>
+      <div class="play-btn pink">▶ 開始遊戲</div>
     </div>
   </a>
 
-  <!-- Coming soon slots -->
-  <div class="card-coming">
-    <div class="plus">＋</div>
-    <p>更多遊戲即將推出</p>
-  </div>
+  <!-- 3. Crypto Breakout -->
+  <a href="crypto-breakout.html" class="card crypto">
+    <div class="card-preview crypto">
+      <div class="preview-coins">
+        <div class="coin-dot" style="background:#F7931A;">₿</div>
+        <div class="coin-dot" style="background:#627EEA;">◆</div>
+        <div class="coin-dot" style="background:#F3BA2F;">B</div>
+        <div class="coin-dot" style="background:#9945FF;">◈</div>
+        <div class="coin-dot" style="background:#00A3FF;">✕</div>
+        <div class="coin-dot" style="background:#C2A633;">Ð</div>
+        <div class="coin-dot" style="background:#0033AD;">✦</div>
+        <div class="coin-dot" style="background:#26A17B;">₮</div>
+        <div class="coin-dot" style="background:#8247E5;">⬡</div>
+      </div>
+      <div class="preview-icon crypto-glow" style="animation-delay:.5s;">₿</div>
+      <span class="badge badge-hot">New</span>
+    </div>
+    <div class="card-body">
+      <div class="game-name crypto">CRYPTO BREAKOUT</div>
+      <div class="game-desc">打磚塊遇上加密貨幣！敲碎 BTC、ETH、SOL… 連擊越多財富越多，挑戰 5 關通關。</div>
+      <div class="tags">
+        <span class="tag tag-orange">打磚塊</span>
+        <span class="tag tag-green">單人</span>
+        <span class="tag tag-purple">加密貨幣</span>
+        <span class="tag tag-yellow">5關卡</span>
+      </div>
+      <div class="play-btn crypto">▶ 開始遊戲</div>
+    </div>
+  </a>
 
+  <!-- Coming soon -->
   <div class="card-coming">
     <div class="plus">＋</div>
     <p>更多遊戲即將推出</p>
