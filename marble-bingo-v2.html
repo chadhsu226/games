@@ -3,9 +3,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#04080f;display:flex;justify-content:center;font-family:'Noto Sans TC',Arial,sans-serif;min-height:100vh;}
+body{background:#04080f;display:flex;justify-content:center;font-family:'Noto Sans TC',Arial,sans-serif;height:100vh;overflow:hidden;}
 #gw{width:420px;position:relative;}
-canvas{display:block;}
+canvas{display:block;transform-origin:top center;}
 #ov{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(4,8,24,0.97);border:2px solid #ffd700;border-radius:16px;padding:22px 26px;text-align:center;color:#fff;display:none;z-index:10;min-width:290px;max-width:340px;box-shadow:0 0 40px rgba(255,215,0,0.25);}
 #ov h2{margin:0 0 6px;font-size:22px;color:#ffd700;}
 #ov .sc{font-size:34px;color:#ffd700;font-weight:bold;margin:10px 0 4px;}
@@ -697,5 +697,20 @@ function loop(){
 }
 C.addEventListener('click',()=>{if(!shufflePhase&&!gameOver)spawnBall();});
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&!shufflePhase&&!gameOver){e.preventDefault();spawnBall();}});
+
+// ── 自動縮放 ──
+function fitCanvas(){
+  const availH = window.innerHeight - 8;
+  const availW = window.innerWidth;
+  const scaleH = availH / H;
+  const scaleW = availW / W;
+  const scale  = Math.min(scaleH, scaleW, 1);
+  C.style.transform = "scale(" + scale + ")";
+  C.style.transformOrigin = "top center";
+  document.getElementById("gw").style.width  = (W * scale) + "px";
+  document.getElementById("gw").style.height = (H * scale) + "px";
+}
+window.addEventListener("resize", fitCanvas);
+fitCanvas();
 </script>
 </body></html>

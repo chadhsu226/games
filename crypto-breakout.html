@@ -21,8 +21,8 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  min-height:100vh;
-  overflow-x:hidden;
+  height:100vh;
+  overflow:hidden;
 }
 /* ── 星點背景 ── */
 body::before{
@@ -147,8 +147,14 @@ canvas{display:block;border-radius:12px;border:1px solid rgba(255,215,0,.12);}
 // ─────────────────────────────────────────
 const C = document.getElementById('c');
 const ctx = C.getContext('2d');
-const W = Math.min(480, window.innerWidth - 16);
-const H = Math.round(W * 1.45);
+// 自動適應視窗
+const ASPECT = 1.45;
+const headerH = 100; // header + hud 大約高度
+const controlH = 36;
+const maxH = window.innerHeight - headerH - controlH - 16;
+const maxW = window.innerWidth - 16;
+const W = Math.min(480, maxW, Math.round(maxH / ASPECT));
+const H = Math.round(W * ASPECT);
 C.width = W; C.height = H;
 document.getElementById('wrap').style.width = W + 'px';
 
