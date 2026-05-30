@@ -295,7 +295,10 @@ function checkIntegration(gridArr){
   const achieved=sectors.filter(sec=>
     STOCKS.filter(s=>s.sector===sec).every(s=>gridArr[STOCKS.indexOf(s)])
   );
-  const vertical=achieved.length===3;
+  // 垂直整合：三個產業各至少點亮1家
+  const vertical=sectors.every(sec=>
+    STOCKS.some((s,i)=>s.sector===sec&&gridArr[i])
+  );
   // 國際加分：任一格國內 + 任一格國外
   const hasDOM=STOCKS.some((s,i)=>s.origin==='domestic'&&gridArr[i]);
   const hasFor=STOCKS.some((s,i)=>s.origin==='foreign'&&gridArr[i]);
