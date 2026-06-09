@@ -53,6 +53,27 @@
     text-align: center;
     padding: 70px 20px 50px;
   }
+  .back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--green);
+    text-decoration: none;
+    padding: 7px 16px;
+    border: 1px solid rgba(127,255,176,0.4);
+    border-radius: 20px;
+    margin-bottom: 28px;
+    background: rgba(127,255,176,0.06);
+    transition: background 0.18s, box-shadow 0.18s;
+    position: relative;
+    z-index: 1;
+  }
+  .back-home:hover {
+    background: rgba(127,255,176,0.15);
+    box-shadow: 0 0 16px rgba(127,255,176,0.4);
+  }
   .glow-ring {
     display: inline-block; font-size: 3rem; margin-bottom: 16px;
     filter: drop-shadow(0 0 20px var(--pink));
@@ -244,6 +265,7 @@
 <body>
 
 <header>
+  <a href="https://chadhsu226.github.io/" class="back-home">← 返回首頁</a>
   <div class="glow-ring">🎮</div>
   <h1>CHAD'S GAME ZONE</h1>
   <p class="tagline">play · relax · have fun</p>
