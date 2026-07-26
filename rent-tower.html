@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>疊樓大亨 | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --gold: #ffd700;
+    --red: #ff5566;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    overflow-x:hidden; touch-action:none; min-height:100vh; padding-bottom:30px;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 65%, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  header { text-align:center; padding:18px 16px 6px; position:relative; z-index:1; width:100%; max-width:480px; }
+  .back {
+    position:absolute; left:14px; top:16px;
+    font-size:0.75rem; color:var(--green); text-decoration:none;
+    padding:5px 12px; border:1px solid rgba(127,255,176,0.4); border-radius:16px;
+    background: rgba(127,255,176,0.06);
+  }
+  .back:hover { background: rgba(127,255,176,0.15); }
+  h1 {
+    font-family:'Orbitron', sans-serif;
+    font-size: clamp(1.1rem, 4.8vw, 1.7rem);
+    font-weight:900;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    margin-top:6px;
+  }
+  .tagline { font-size:0.7rem; color:var(--muted); letter-spacing:0.08em; margin-top:6px; }
+
+  .panel {
+    position:relative; z-index:1;
+    width:100%; max-width:420px;
+    padding:14px 16px 0;
+    display:flex; justify-content:center; gap:10px;
+  }
+  .scorebox {
+    background: var(--bg2); border:1px solid rgba(168,85,247,0.3);
+    border-radius:10px; padding:8px 16px; text-align:center; min-width:78px; flex:1;
+  }
+  .scorebox .lbl { font-size:0.6rem; color:var(--muted); letter-spacing:0.1em; }
+  .scorebox .val { font-family:'Orbitron', sans-serif; font-size:1.05rem; font-weight:700; color:var(--purple); }
+
+  .game-wrap {
+    position:relative; z-index:1;
+    width:min(400px, 92vw);
+    margin:16px auto 6px;
+  }
+  #game {
+    width:100%; height:auto; aspect-ratio:400/700; display:block;
+    border-radius:16px;
+    background: radial-gradient(ellipse at 50% 20%, #170a24 0%, #04040c 75%);
+    box-shadow: 0 0 40px rgba(168,85,247,0.18), 0 0 0 1px rgba(168,85,247,0.15);
+    touch-action:none;
+  }
+  .overlay {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; text-align:center; padding:24px;
+    background: rgba(6,6,18,0.88);
+    border-radius:16px;
+  }
+  .hidden { display:none !important; }
+  .overlay h2 {
+    font-family:'Orbitron', sans-serif; font-size:1.3rem; font-weight:900;
+    background: linear-gradient(135deg, var(--purple), var(--yellow));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .overlay p { font-size:0.85rem; color:var(--text); line-height:1.7; max-width:280px; }
+  .overlay .muted { color:var(--muted); font-size:0.75rem; }
+  .stat-line { font-size:0.9rem; }
+  .stat-line b { color: var(--gold); }
+  .newbest { color: var(--yellow); font-weight:700; font-size:0.85rem; }
+  .btn {
+    font-family:'Noto Sans TC', sans-serif; font-size:0.9rem; font-weight:700;
+    color:#fff; background: linear-gradient(135deg, var(--purple), #6b21a8);
+    border:none; border-radius:22px; padding:12px 28px; cursor:pointer;
+    letter-spacing:0.05em; box-shadow:0 4px 20px rgba(168,85,247,0.4);
+  }
+  .btn:active { transform:scale(0.96); }
+
+  footer {
+    position:relative; z-index:1;
+    text-align:center; font-size:0.72rem; color:var(--muted);
+    margin-top:14px; padding:0 20px; line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="back">← 返回列表</a>
+  <h1>疊樓大亨</h1>
+  <p class="tagline">RENT TOWER · 疊出最高的出租大樓</p>
+</header>
+
+<div class="panel">
+  <div class="scorebox"><div class="lbl">樓層</div><div class="val" id="floorVal">0</div></div>
+  <div class="scorebox"><div class="lbl">連續完美</div><div class="val" id="comboVal">0</div></div>
+  <div class="scorebox"><div class="lbl">最佳紀錄</div><div class="val" id="bestVal">0</div></div>
+</div>
+
+<div class="game-wrap">
+  <canvas id="game" width="400" height="700"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <h2>疊樓大亨</h2>
+    <p>移動中的樓層會左右來回擺動，抓準時機放下，疊得越準大樓蓋得越高、租金收益越多。偏差越大樓層越窄，太窄就會倒塌！</p>
+    <p class="muted">空白鍵／↑／點擊畫面 放置樓層</p>
+    <button id="startBtn" class="btn">▶ 開始蓋樓</button>
+  </div>
+
+  <div id="overScreen" class="overlay hidden">
+    <h2>大樓倒塌了！</h2>
+    <p class="stat-line">樓層高度：<b id="finalFloors">0</b> 樓</p>
+    <p class="stat-line">預估月租：NT$ <b id="finalRent">0</b></p>
+    <p class="newbest hidden" id="newBestMsg">🎉 新紀錄！</p>
+    <button id="restartBtn" class="btn">🔄 重新開始</button>
+  </div>
+</div>
+
+<footer>空白鍵／↑／Enter／點擊或觸控畫面 = 放置樓層　·　按 R 重新開始<br>每 5 樓出現黃金樓層，每 6 樓進入景氣波動期（樓層擺動加快）</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LOGICAL_W = 400, LOGICAL_H = 700;
+  var BLOCK_H = 26, BASE_W = 170, MARGIN = 30, FIXED_Y = 470;
+  var COLORS = ['#ff69b4', '#ffe44d', '#7fffb0', '#5599ff', '#a855f7'];
+  var GOLD = '#ffd700', VOLATILE = '#ff5566';
+
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var floorVal = document.getElementById('floorVal');
+  var comboVal = document.getElementById('comboVal');
+  var bestVal = document.getElementById('bestVal');
+  var startScreen = document.getElementById('startScreen');
+  var overScreen = document.getElementById('overScreen');
+  var finalFloorsEl = document.getElementById('finalFloors');
+  var finalRentEl = document.getElementById('finalRent');
+  var newBestMsg = document.getElementById('newBestMsg');
+  var startBtn = document.getElementById('startBtn');
+  var restartBtn = document.getElementById('restartBtn');
+
+  var bestFloors = 0;
+  try {
+    bestFloors = parseInt(localStorage.getItem('rentTowerBest') || '0', 10) || 0;
+  } catch (e) { bestFloors = 0; }
+  bestVal.textContent = bestFloors;
+
+  var state = 'start';
+  var floors = [];
+  var current = null;
+  var count = 0;
+  var combo = 0;
+  var particles = [];
+  var floatTexts = [];
+  var shakeTime = 0;
+  var lastTime = 0;
+
+  function setupDPR() {
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = LOGICAL_W * dpr;
+    canvas.height = LOGICAL_H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  setupDPR();
+  window.addEventListener('resize', setupDPR);
+
+  function roundRect(x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    if (r < 0) r = 0;
+    ctx.beginPath();
+    ctx.moveTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.closePath();
+  }
+
+  function drawBlock(x, y, w, h, color, golden, isCurrent) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = isCurrent ? 18 : 7;
+    roundRect(x, y, w, h, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (golden) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1.5;
+      roundRect(x + 2, y + 2, w - 4, h - 4, 4);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function spawnNext() {
+    var prev = floors[floors.length - 1];
+    var w = prev.w;
+    var floorNo = count;
+    var golden = floorNo % 5 === 0;
+    var volatile = floorNo % 6 === 0 && floorNo > 3;
+    var baseSpeed = Math.min(6.2, 1.7 + (count - 1) * 0.045);
+    var speed = volatile ? baseSpeed * 1.35 : baseSpeed;
+    var color = volatile ? VOLATILE : (golden ? GOLD : COLORS[count % COLORS.length]);
+    current = {
+      x: MARGIN + Math.random() * (LOGICAL_W - 2 * MARGIN - w),
+      w: w,
+      dir: Math.random() < 0.5 ? 1 : -1,
+      speed: speed,
+      golden: golden,
+      volatile: volatile,
+      color: color
+    };
+  }
+
+  function spawnDebris(x, w, color) {
+    if (w <= 0) return;
+    particles.push({
+      x: x, y: FIXED_Y - BLOCK_H, w: w, h: BLOCK_H,
+      vx: (x < LOGICAL_W / 2 ? -1 : 1) * (1 + Math.random() * 2),
+      vy: -1.5 - Math.random() * 1.5,
+      rot: 0, vrot: (Math.random() - 0.5) * 0.25,
+      alpha: 1, color: color
+    });
+  }
+
+  function addFloatText(text, color, yOffset) {
+    floatTexts.push({ x: LOGICAL_W / 2, y: FIXED_Y - 50 - (yOffset || 0), text: text, color: color, alpha: 1 });
+  }
+
+  function updateHUD() {
+    floorVal.textContent = Math.max(0, count - 1);
+    comboVal.textContent = combo;
+    bestVal.textContent = bestFloors;
+  }
+
+  function initGame() {
+    floors = [{ x: (LOGICAL_W - BASE_W) / 2, w: BASE_W, color: '#8888cc', golden: false }];
+    count = 1;
+    combo = 0;
+    particles = [];
+    floatTexts = [];
+    shakeTime = 0;
+    spawnNext();
+    updateHUD();
+  }
+
+  function startGame() {
+    initGame();
+    state = 'playing';
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+  }
+
+  function endGame() {
+    state = 'over';
+    var finalFloors = Math.max(0, count - 1);
+    var prevBest = bestFloors;
+    var isNewBest = finalFloors > prevBest;
+    bestFloors = Math.max(prevBest, finalFloors);
+    try { localStorage.setItem('rentTowerBest', String(bestFloors)); } catch (e) {}
+    finalFloorsEl.textContent = finalFloors;
+    finalRentEl.textContent = (finalFloors * 8).toLocaleString();
+    if (isNewBest && finalFloors > 0) {
+      newBestMsg.classList.remove('hidden');
+    } else {
+      newBestMsg.classList.add('hidden');
+    }
+    updateHUD();
+    shakeTime = 260;
+    setTimeout(function () {
+      overScreen.classList.remove('hidden');
+    }, 260);
+  }
+
+  function dropBlock() {
+    var prev = floors[floors.length - 1];
+    var cx = current.x, cw = current.w;
+    var isPerfect = Math.abs(cx - prev.x) <= 6;
+    var placedGolden = current.golden;
+
+    if (isPerfect) {
+      floors.push({ x: prev.x, w: prev.w, color: current.color, golden: placedGolden });
+      combo++;
+      addFloatText(combo > 1 ? '完美連線 x' + combo + '!' : '完美!', '#ffe44d', 0);
+    } else {
+      var overlapLeft = Math.max(cx, prev.x);
+      var overlapRight = Math.min(cx + cw, prev.x + prev.w);
+      var overlapW = overlapRight - overlapLeft;
+
+      if (overlapW <= 2) {
+        spawnDebris(cx, cw, current.color);
+        endGame();
+        return;
+      }
+
+      if (cx < overlapLeft) spawnDebris(cx, overlapLeft - cx, current.color);
+      if (cx + cw > overlapRight) spawnDebris(overlapRight, (cx + cw) - overlapRight, current.color);
+
+      floors.push({ x: overlapLeft, w: overlapW, color: current.color, golden: placedGolden });
+      combo = 0;
+    }
+
+    if (placedGolden) addFloatText('💰 黃金樓層', '#ffd700', isPerfect ? 24 : 0);
+
+    count++;
+    updateHUD();
+    spawnNext();
+  }
+
+  function handleAction() {
+    if (state === 'start' || state === 'over') {
+      startGame();
+    } else if (state === 'playing') {
+      dropBlock();
+    }
+  }
+
+  function update(dt) {
+    if (state !== 'playing' || !current) return;
+    var step = current.speed * dt * 0.06;
+    current.x += current.dir * step;
+    if (current.volatile && Math.random() < 0.02) current.dir *= -1;
+    if (current.x < MARGIN) { current.x = MARGIN; current.dir = 1; }
+    if (current.x + current.w > LOGICAL_W - MARGIN) { current.x = LOGICAL_W - MARGIN - current.w; current.dir = -1; }
+
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.vy += 0.5 * dt * 0.06;
+      p.x += p.vx * dt * 0.06;
+      p.y += p.vy * dt * 0.06;
+      p.rot += p.vrot * dt * 0.06;
+      p.alpha -= 0.012 * dt * 0.06;
+    }
+    particles = particles.filter(function (pp) { return pp.alpha > 0 && pp.y < LOGICAL_H + 60; });
+
+    for (var j = 0; j < floatTexts.length; j++) {
+      floatTexts[j].y -= 0.04 * dt;
+      floatTexts[j].alpha -= 0.018 * dt * 0.06;
+    }
+    floatTexts = floatTexts.filter(function (tt) { return tt.alpha > 0; });
+
+    if (shakeTime > 0) shakeTime -= dt;
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+    ctx.save();
+    if (shakeTime > 0) {
+      ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+    }
+
+    for (var i = floors.length - 1; i >= 0; i--) {
+      var k = floors.length - 1 - i;
+      var y = FIXED_Y + k * BLOCK_H;
+      if (y - BLOCK_H > LOGICAL_H) break;
+      drawBlock(floors[i].x, y, floors[i].w, BLOCK_H, floors[i].color, floors[i].golden, false);
+    }
+
+    if (state === 'playing' && current) {
+      drawBlock(current.x, FIXED_Y - BLOCK_H, current.w, BLOCK_H, current.color, current.golden, true);
+    }
+
+    for (var pi = 0; pi < particles.length; pi++) {
+      var p = particles[pi];
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.font = "700 15px 'Orbitron', sans-serif";
+    for (var ti = 0; ti < floatTexts.length; ti++) {
+      var t = floatTexts[ti];
+      if (!t.text) continue;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t.alpha);
+      ctx.fillStyle = t.color;
+      ctx.shadowColor = t.color;
+      ctx.shadowBlur = 10;
+      ctx.fillText(t.text, t.x, t.y);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function frame(t) {
+    var dt = lastTime ? t - lastTime : 16;
+    if (dt > 60) dt = 60;
+    lastTime = t;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    if (state === 'playing') dropBlock();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') {
+      e.preventDefault();
+      handleAction();
+    } else if (e.key === 'r' || e.key === 'R') {
+      startGame();
+    }
+  });
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
