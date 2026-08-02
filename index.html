@@ -178,6 +178,14 @@
   .fg-cell:nth-child(7){background:#FFD700;} .fg-cell:nth-child(8){background:#5580ff;} .fg-cell:nth-child(9){background:#F47920;}
 
   /* Crypto preview coins */
+
+  /* Bull ascension candle preview */
+  .preview-candles {
+    position: absolute; inset: 0;
+    display: flex; align-items: flex-end; justify-content: space-evenly;
+    gap: 6px; padding: 20px 16px 16px; opacity: 0.32;
+  }
+  .candle-bar { width: 11%; border-radius: 3px 3px 0 0; }
   .preview-coins {
     position: absolute; inset: 0;
     display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
@@ -396,7 +404,6 @@
   <a href="rent-tower.html" class="card">
     <div class="card-preview" style="background: radial-gradient(ellipse at 50% 40%, #170a24 0%, #04080f 70%);">
       <div class="preview-icon" style="filter: drop-shadow(0 0 16px var(--purple));">🏢</div>
-      <span class="badge badge-hot">New</span>
     </div>
     <div class="card-body">
       <div class="game-name" style="color: var(--purple);">疊樓大亨</div>
@@ -408,6 +415,33 @@
         <span class="tag tag-yellow">手感</span>
       </div>
       <div class="play-btn" style="background: linear-gradient(135deg, #a855f7, #6b21a8); color: #fff;">▶ 開始遊戲</div>
+    </div>
+  </a>
+
+  <!-- 7. Bull Ascension 多頭衝天 -->
+  <a href="bull-ascension.html" class="card">
+    <div class="card-preview" style="background: radial-gradient(ellipse at 50% 60%, #001830 0%, #04080f 70%);">
+      <div class="preview-candles">
+        <div class="candle-bar" style="height:30%; background:#ff5566;"></div>
+        <div class="candle-bar" style="height:55%; background:var(--green);"></div>
+        <div class="candle-bar" style="height:40%; background:#ff5566;"></div>
+        <div class="candle-bar" style="height:75%; background:var(--green);"></div>
+        <div class="candle-bar" style="height:60%; background:var(--green);"></div>
+        <div class="candle-bar" style="height:90%; background:var(--green);"></div>
+      </div>
+      <div class="preview-icon" style="filter: drop-shadow(0 0 16px #5599ff);">🐂</div>
+      <span class="badge badge-hot">New</span>
+    </div>
+    <div class="card-body">
+      <div class="game-name" style="color:#5599ff;">多頭衝天 BULL ASCENSION</div>
+      <div class="game-desc">垂直跳躍闖關！沿著K線階梯往上衝，收集配息金幣、閃避空頭爪，搶到融資火箭衝上雲霄，看你的身家能衝多高。</div>
+      <div class="tags">
+        <span class="tag tag-blue">跳躍</span>
+        <span class="tag tag-green">單人</span>
+        <span class="tag tag-blue">金融</span>
+        <span class="tag tag-yellow">手感</span>
+      </div>
+      <div class="play-btn" style="background: linear-gradient(135deg, #5599ff, #1d4fd6); color: #fff;">▶ 開始遊戲</div>
     </div>
   </a>
 

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>多頭衝天 BULL ASCENSION · Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --blue: #5599ff;
+    --red: #ff5566;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 2;
+    text-align: center;
+    padding: 16px 12px 8px;
+  }
+  .back-home {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; font-weight: 500; color: var(--green);
+    text-decoration: none; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(127,255,176,0.4); background: rgba(127,255,176,0.06);
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+    font-weight: 900; letter-spacing: 0.04em;
+    margin-top: 8px;
+    background: linear-gradient(135deg, var(--blue), var(--green), var(--yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .game-wrap {
+    position: relative; z-index: 1;
+    width: min(94vw, 420px);
+    margin: 8px auto 0;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(85,153,255,0.3);
+    box-shadow: 0 8px 50px rgba(85,153,255,0.15);
+    background: #04060f;
+  }
+  #gameCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+    background: #04060f;
+  }
+
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px;
+    background: rgba(4,6,15,0.92);
+    text-align: center;
+    z-index: 5;
+  }
+  .overlay.hidden { display: none; }
+  .overlay .icon { font-size: 3rem; filter: drop-shadow(0 0 18px var(--blue)); }
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.3rem; letter-spacing: 0.05em;
+    color: var(--yellow);
+  }
+  .overlay p.desc {
+    font-size: 0.82rem; color: var(--text); line-height: 1.8; max-width: 320px; font-weight: 300;
+  }
+  .overlay p.desc b { color: var(--blue); font-weight: 500; }
+  .overlay .score-line {
+    font-family: 'Orbitron', sans-serif; font-size: 0.95rem; color: var(--green);
+  }
+  .overlay .best-line { font-size: 0.78rem; color: var(--muted); }
+  .btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em;
+    color: #fff; border: none; cursor: pointer;
+    padding: 13px 34px; border-radius: 30px;
+    background: linear-gradient(135deg, var(--blue), #1d4fd6);
+    box-shadow: 0 4px 22px rgba(85,153,255,0.45);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.secondary {
+    background: transparent; border: 1px solid rgba(230,230,255,0.3);
+    box-shadow: none; color: var(--muted); font-size: 0.75rem; padding: 9px 22px;
+  }
+
+  .hud {
+    position: absolute; top: 10px; left: 0; right: 0;
+    display: flex; justify-content: space-between; padding: 0 14px;
+    font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--text);
+    pointer-events: none; z-index: 4; text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  }
+  .hud span.lbl { color: var(--muted); font-size: 0.6rem; display: block; }
+
+  .hint-row {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    font-size: 0.68rem; color: var(--muted); max-width: 340px;
+  }
+  .hint-row span { padding: 3px 9px; border: 1px solid rgba(102,102,170,0.4); border-radius: 12px; }
+
+  footer {
+    position: relative; z-index: 1;
+    text-align: center; padding: 18px 20px 24px;
+    font-size: 0.72rem; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="back-home">← 返回遊戲大廳</a>
+  <h1>🐂 多頭衝天 BULL ASCENSION</h1>
+</header>
+
+<div class="game-wrap" id="gameWrap">
+  <canvas id="gameCanvas" width="400" height="640"></canvas>
+
+  <div class="hud" id="hud" style="display:none;">
+    <div><span class="lbl">身高</span><span id="hudScore">0</span> m</div>
+    <div style="text-align:right;"><span class="lbl">最佳</span><span id="hudBest">0</span> m</div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="icon">🐂</div>
+    <h2>多頭衝天</h2>
+    <p class="desc">
+      沿著<b>K線階梯</b>一路往上跳！紅K會碎、藍K會滑，踩穩節奏別摔下去。<br>
+      收集 <b>💰配息金幣</b> 加分，搶到 <b>🚀融資火箭</b> 衝一波，小心 <b>🐻空頭爪</b> 把你打回原形。
+    </p>
+    <div class="hint-row">
+      <span>⌨️ ←→ / A D 移動</span>
+      <span>📱 觸控左右半邊移動</span>
+      <span>邊界自動繞回</span>
+    </div>
+    <div class="best-line">歷史最佳：<b id="startBest">0</b> m</div>
+    <button class="btn" id="startBtn">▶ 開始衝刺</button>
+  </div>
+
+  <div class="overlay hidden" id="endScreen">
+    <div class="icon">📉</div>
+    <h2>行情結束</h2>
+    <div class="score-line">本次身高：<span id="finalScore">0</span> m</div>
+    <div class="score-line" style="color:var(--yellow);">帳戶淨值：NT$ <span id="finalValue">0</span></div>
+    <div class="best-line" id="newBestTag" style="color:var(--pink); display:none;">🎉 締造新紀錄！</div>
+    <div class="best-line">歷史最佳：<span id="endBest">0</span> m</div>
+    <button class="btn" id="retryBtn">↻ 再衝一次</button>
+    <a href="index.html" class="btn secondary">返回遊戲大廳</a>
+  </div>
+</div>
+
+<footer>多頭衝天 · Chad's Game Zone</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  var startScreen = document.getElementById('startScreen');
+  var endScreen = document.getElementById('endScreen');
+  var hud = document.getElementById('hud');
+  var hudScoreEl = document.getElementById('hudScore');
+  var hudBestEl = document.getElementById('hudBest');
+  var startBtn = document.getElementById('startBtn');
+  var retryBtn = document.getElementById('retryBtn');
+  var startBestEl = document.getElementById('startBest');
+  var endBestEl = document.getElementById('endBest');
+  var finalScoreEl = document.getElementById('finalScore');
+  var finalValueEl = document.getElementById('finalValue');
+  var newBestTagEl = document.getElementById('newBestTag');
+
+  var STORAGE_KEY = 'gamezone_bull_ascension_best';
+  var best = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
+  startBestEl.textContent = best;
+
+  var GRAVITY = 0.32;
+  var JUMP_V = -10.6;
+  var MOVE_SPEED = 4.6;
+  var PLAYER_R = 17;
+  var PLAT_W = 68, PLAT_H = 15;
+  var BOOST_FRAMES = 75;
+  var BOOST_VY = -13.5;
+  var SCROLL_THRESHOLD = H * 0.42;
+
+  var state = 'idle'; // idle | playing | over
+  var player, platforms, coins, obstacles, rockets, particles;
+  var score, bonus, nextSpawnY;
+  var keys = { left:false, right:false };
+
+  function resetGame(){
+    player = { x: W/2, y: H - 90, vx: 0, vy: JUMP_V, boostTimer: 0 };
+    platforms = [];
+    coins = [];
+    obstacles = [];
+    rockets = [];
+    particles = [];
+    score = 0;
+    bonus = 0;
+
+    var groundY = H - 40;
+    platforms.push({ x: W/2 - PLAT_W/2, y: groundY, w: PLAT_W, h: PLAT_H, type: 'normal', broken: false, dir: 0 });
+
+    nextSpawnY = groundY - gapForScore();
+    while (nextSpawnY > -100) {
+      spawnPlatform(nextSpawnY);
+      nextSpawnY -= gapForScore();
+    }
+  }
+
+  function gapForScore(){
+    var diff = Math.min(score / 3000, 1);
+    return 66 + Math.random() * (46 + 30 * diff);
+  }
+
+  function spawnPlatform(y){
+    var margin = 26;
+    var x = margin + Math.random() * (W - 2*margin - PLAT_W);
+    var diff = Math.min(score / 3000, 1);
+    var r = Math.random();
+    var type = 'normal';
+    if (r < 0.12 + 0.10*diff) type = 'fragile';
+    else if (r < 0.12 + 0.10*diff + 0.10 + 0.08*diff) type = 'moving';
+
+    var plat = { x:x, y:y, w:PLAT_W, h:PLAT_H, type:type, broken:false, dir: type==='moving' ? (Math.random()<0.5?-1:1) : 0 };
+    platforms.push(plat);
+
+    if (Math.random() < 0.16) {
+      coins.push({ x: x + PLAT_W/2 - 11, y: y - 34, r: 12, taken:false });
+    }
+    if (Math.random() < 0.09 + 0.05*diff) {
+      obstacles.push({ x: margin + Math.random()*(W - 2*margin - 26), y: y - 76, w:26, h:26, hit:false, bob: Math.random()*Math.PI*2 });
+    }
+    if (Math.random() < 0.014) {
+      rockets.push({ x: x + PLAT_W/2 - 14, y: y - 30, w:28, h:28, taken:false });
+    }
+  }
+
+  function collides(px, py, pr, bx, by, bw, bh){
+    return px + pr > bx && px - pr < bx + bw && py + pr > by && py - pr < by + bh;
+  }
+
+  function startGame(){
+    resetGame();
+    state = 'playing';
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    hud.style.display = 'flex';
+  }
+
+  function endGame(){
+    state = 'over';
+    hud.style.display = 'none';
+    var finalScore = Math.floor((score + bonus) / 5);
+    var isNew = finalScore > best;
+    if (isNew) {
+      best = finalScore;
+      localStorage.setItem(STORAGE_KEY, String(best));
+    }
+    finalScoreEl.textContent = finalScore;
+    finalValueEl.textContent = (100000 + finalScore * 1234).toLocaleString('en-US');
+    endBestEl.textContent = best;
+    newBestTagEl.style.display = isNew ? 'block' : 'none';
+    endScreen.classList.remove('hidden');
+  }
+
+  function update(){
+    if (state !== 'playing') return;
+
+    if (keys.left && !keys.right) player.vx = -MOVE_SPEED;
+    else if (keys.right && !keys.left) player.vx = MOVE_SPEED;
+    else player.vx *= 0.82;
+    player.x += player.vx;
+    if (player.x < -PLAYER_R) player.x = W + PLAYER_R;
+    if (player.x > W + PLAYER_R) player.x = -PLAYER_R;
+
+    if (player.boostTimer > 0) {
+      player.vy = BOOST_VY;
+      player.boostTimer--;
+      if (Math.random() < 0.6) {
+        particles.push({ x: player.x + (Math.random()-0.5)*10, y: player.y + 16, vy: 2+Math.random()*2, life: 18, r: 3+Math.random()*3 });
+      }
+    } else {
+      player.vy += GRAVITY;
+    }
+    player.y += player.vy;
+
+    platforms.forEach(function(p){
+      if (p.type === 'moving') {
+        p.x += p.dir * 1.3;
+        if (p.x < 10 || p.x + p.w > W - 10) p.dir *= -1;
+      }
+    });
+
+    if (player.y < SCROLL_THRESHOLD) {
+      var dy = SCROLL_THRESHOLD - player.y;
+      player.y = SCROLL_THRESHOLD;
+      score += dy;
+      platforms.forEach(function(p){ p.y += dy; });
+      coins.forEach(function(c){ c.y += dy; });
+      obstacles.forEach(function(o){ o.y += dy; });
+      rockets.forEach(function(r){ r.y += dy; });
+      particles.forEach(function(pt){ pt.y += dy; });
+      nextSpawnY += dy;
+      while (nextSpawnY > -100) {
+        spawnPlatform(nextSpawnY);
+        nextSpawnY -= gapForScore();
+      }
+    }
+
+    if (player.vy > 0) {
+      for (var i = 0; i < platforms.length; i++) {
+        var p = platforms[i];
+        if (p.broken) continue;
+        var bottom = player.y + PLAYER_R;
+        if (player.x + PLAYER_R*0.6 > p.x && player.x - PLAYER_R*0.6 < p.x + p.w &&
+            bottom >= p.y && bottom <= p.y + p.h + Math.min(player.vy, 16)) {
+          if (p.type === 'fragile') {
+            p.broken = true;
+            player.vy = JUMP_V * 0.85;
+          } else {
+            player.vy = JUMP_V;
+          }
+          break;
+        }
+      }
+    }
+
+    obstacles.forEach(function(o){
+      o.bob += 0.08;
+      if (!o.hit && collides(player.x, player.y, PLAYER_R*0.75, o.x, o.y + Math.sin(o.bob)*4, o.w, o.h)) {
+        o.hit = true;
+        player.vy = Math.abs(player.vy) + 7;
+        canvas.style.filter = 'brightness(1.6) saturate(1.4)';
+        setTimeout(function(){ canvas.style.filter = ''; }, 90);
+      }
+    });
+
+    coins.forEach(function(c){
+      if (!c.taken && collides(player.x, player.y, PLAYER_R*0.75, c.x - c.r, c.y - c.r, c.r*2, c.r*2)) {
+        c.taken = true;
+        bonus += 220;
+      }
+    });
+
+    rockets.forEach(function(r){
+      if (!r.taken && collides(player.x, player.y, PLAYER_R*0.8, r.x, r.y, r.w, r.h)) {
+        r.taken = true;
+        player.boostTimer = BOOST_FRAMES;
+      }
+    });
+
+    particles.forEach(function(pt){ pt.y += pt.vy; pt.life--; });
+    particles = particles.filter(function(pt){ return pt.life > 0; });
+
+    platforms = platforms.filter(function(p){ return p.y < H + 40 && !(p.broken && p.y > -60 && p.y < H); });
+    coins = coins.filter(function(c){ return c.y < H + 40 && !c.taken; });
+    obstacles = obstacles.filter(function(o){ return o.y < H + 40; });
+    rockets = rockets.filter(function(r){ return r.y < H + 40 && !r.taken; });
+
+    hudScoreEl.textContent = Math.floor((score + bonus) / 5);
+    hudBestEl.textContent = best;
+
+    if (player.y - PLAYER_R > H) {
+      endGame();
+    }
+  }
+
+  function drawCandle(p){
+    var color = p.type === 'fragile' ? '#ff5566' : (p.type === 'moving' ? '#5599ff' : '#7fffb0');
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(p.x + p.w/2, p.y - 6);
+    ctx.lineTo(p.x + p.w/2, p.y + p.h + 6);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = p.broken ? 0 : 10;
+    if (p.type === 'fragile') ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(p.x, p.y, p.w, p.h, 4) : ctx.rect(p.x, p.y, p.w, p.h);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function render(){
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0a1230');
+    grad.addColorStop(1, '#04060f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    if (state === 'idle') return;
+
+    platforms.forEach(drawCandle);
+
+    coins.forEach(function(c){
+      if (c.taken) return;
+      ctx.save();
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#ffe44d';
+      ctx.shadowBlur = 10;
+      ctx.fillText('💰', c.x, c.y);
+      ctx.restore();
+    });
+
+    obstacles.forEach(function(o){
+      if (o.hit) return;
+      ctx.save();
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#ff5566';
+      ctx.shadowBlur = 8;
+      ctx.fillText('🐻', o.x + o.w/2, o.y + o.h/2 + Math.sin(o.bob)*4);
+      ctx.restore();
+    });
+
+    rockets.forEach(function(r){
+      if (r.taken) return;
+      ctx.save();
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#a855f7';
+      ctx.shadowBlur = 12;
+      ctx.fillText('🚀', r.x + r.w/2, r.y + r.h/2);
+      ctx.restore();
+    });
+
+    particles.forEach(function(pt){
+      ctx.save();
+      ctx.globalAlpha = Math.max(pt.life / 18, 0);
+      ctx.fillStyle = '#ffb347';
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    if (player) {
+      ctx.save();
+      ctx.font = '30px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = player.boostTimer > 0 ? '#ffb347' : '#5599ff';
+      ctx.shadowBlur = player.boostTimer > 0 ? 20 : 12;
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      if (player.vx < -0.3) ctx.scale(-1, 1);
+      ctx.fillText('🐂', 0, 0);
+      ctx.restore();
+      ctx.restore();
+    }
+  }
+
+  function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { keys.left = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { keys.right = true; e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+  });
+
+  function handlePointer(clientX){
+    var rect = canvas.getBoundingClientRect();
+    var relX = clientX - rect.left;
+    if (relX < rect.width / 2) { keys.left = true; keys.right = false; }
+    else { keys.right = true; keys.left = false; }
+  }
+  canvas.addEventListener('pointerdown', function(e){ handlePointer(e.clientX); });
+  canvas.addEventListener('pointermove', function(e){ if (e.pressure > 0 || e.pointerType !== 'mouse') handlePointer(e.clientX); });
+  canvas.addEventListener('pointerup', function(){ keys.left = false; keys.right = false; });
+  canvas.addEventListener('pointercancel', function(){ keys.left = false; keys.right = false; });
+  canvas.addEventListener('pointerleave', function(){ keys.left = false; keys.right = false; });
+
+  startBtn.addEventListener('click', startGame);
+  retryBtn.addEventListener('click', startGame);
+
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
