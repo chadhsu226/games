@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>日光咖啡：尖峰時刻 SUNLIGHT RUSH | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --gold: #ffd700;
+    --red: #ff4d6a;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header { text-align: center; padding: 18px 16px 8px; position: relative; z-index: 1; }
+  .back {
+    position: absolute; left: 14px; top: 16px;
+    font-size: 0.75rem; color: var(--green); text-decoration: none;
+    padding: 5px 12px; border: 1px solid rgba(127,255,176,0.4); border-radius: 16px;
+    background: rgba(127,255,176,0.06);
+  }
+  .back:hover { background: rgba(127,255,176,0.15); }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.05rem, 4.5vw, 1.6rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--yellow), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .sub { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; margin-top: 2px; }
+
+  .hud {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    font-family: 'Orbitron', sans-serif; font-size: 0.82rem;
+    padding: 10px 0 8px; position: relative; z-index: 1;
+  }
+  .hud span b { color: var(--gold); }
+  .hud .combo b { color: var(--pink); }
+  .hud .best b { color: var(--green); }
+  .hud .time b { color: var(--yellow); }
+  .hearts { font-size: 0.85rem; letter-spacing: 3px; }
+
+  .timerbar {
+    width: min(90vw, 380px); height: 6px; background: rgba(255,255,255,0.08);
+    border-radius: 4px; overflow: hidden; margin: 0 auto 14px; position: relative; z-index: 1;
+  }
+  .timerfill { height: 100%; background: linear-gradient(90deg, var(--green), var(--yellow)); width: 100%; }
+
+  #wrap {
+    position: relative; z-index: 1;
+    width: min(90vw, 380px);
+    border: 1px solid rgba(255,228,77,0.25);
+    border-radius: 16px;
+    box-shadow: 0 0 40px rgba(255,228,77,0.1), inset 0 0 60px rgba(13,13,36,0.8);
+    background: var(--bg2);
+    padding: 12px;
+  }
+  #wrap.shake { animation: bigshake 0.3s; }
+  @keyframes bigshake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 10px;
+    aspect-ratio: 1 / 1;
+  }
+  .slot {
+    position: relative;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,228,77,0.22);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; cursor: pointer;
+  }
+  .slot-num {
+    position: absolute; top: 5px; left: 8px;
+    font-size: 0.62rem; color: var(--muted); font-family: 'Orbitron', sans-serif;
+  }
+  .cup { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; animation: pop 0.16s ease; }
+  @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .cup-icon { font-size: 2.2rem; filter: drop-shadow(0 0 10px currentColor); }
+  .cup.normal .cup-icon { color: var(--yellow); }
+  .cup.vip .cup-icon { color: var(--gold); }
+  .cup.trouble .cup-icon { color: var(--red); }
+  .cup-ring {
+    position: absolute; left: 0; bottom: 0; height: 4px; width: 100%;
+    transition-property: width; transition-timing-function: linear;
+  }
+  .cup.normal .cup-ring { background: var(--yellow); }
+  .cup.vip .cup-ring { background: var(--gold); }
+  .cup.trouble .cup-ring { background: var(--red); }
+
+  .flash-good { box-shadow: inset 0 0 0 2px var(--green); }
+  .flash-bad { box-shadow: inset 0 0 0 2px var(--red); }
+  .flash-miss { box-shadow: inset 0 0 0 2px var(--muted); }
+
+  .float-score {
+    position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+    font-family: 'Orbitron', sans-serif; font-weight: 700; color: var(--green);
+    font-size: 0.95rem; pointer-events: none; animation: floatUp 0.65s ease forwards;
+  }
+  @keyframes floatUp {
+    from { opacity: 1; transform: translate(-50%, 0); }
+    to   { opacity: 0; transform: translate(-50%, -30px); }
+  }
+
+  .overlay {
+    position: absolute; inset: 12px; z-index: 5;
+    background: rgba(6,6,18,0.92); border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+  }
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.3rem; font-weight: 900;
+    color: var(--gold); margin-bottom: 10px;
+    filter: drop-shadow(0 0 14px rgba(255,215,0,0.5));
+  }
+  .overlay p { font-size: 0.8rem; color: var(--muted); line-height: 1.75; margin-bottom: 10px; }
+  .overlay p b { color: var(--text); }
+  .hint2 { font-size: 0.7rem !important; color: var(--muted) !important; margin-bottom: 16px !important; }
+  .overlay .final { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: var(--gold); margin-bottom: 6px; }
+  .newbest { color: var(--pink); font-size: 0.8rem; margin-bottom: 12px; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  .btn {
+    font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 600;
+    padding: 11px 30px; border: none; border-radius: 26px; cursor: pointer;
+    background: linear-gradient(135deg, var(--yellow), #c89a00); color: #241a00;
+    box-shadow: 0 0 24px rgba(255,228,77,0.35);
+  }
+  .btn:active { transform: scale(0.96); }
+  .hidden { display: none !important; }
+
+  .hint { font-size: 0.7rem; color: var(--muted); padding: 14px 20px; text-align: center; position: relative; z-index: 1; max-width: 380px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="index.html">← 返回</a>
+  <h1>日光咖啡：尖峰時刻</h1>
+  <div class="sub">SUNLIGHT RUSH・到客機率越來越高</div>
+</header>
+
+<div class="hud">
+  <span>營收 <b id="score">$0</b></span>
+  <span class="combo">連擊 <b id="combo">×1</b></span>
+  <span class="time">倒數 <b id="timeLeft">60</b></span>
+  <span class="best">最佳 <b id="best">$0</b></span>
+</div>
+<div class="hearts" id="hearts">❤️❤️❤️</div>
+
+<div class="timerbar"><div class="timerfill" id="timerFill"></div></div>
+
+<div id="wrap">
+  <div class="grid3" id="grid"></div>
+
+  <div class="overlay" id="startScr">
+    <h2>☕ 日光咖啡開店囉</h2>
+    <p>櫃台會隨機亮起訂單，尖峰時刻到客機率越來越高！<br>
+       ☕ 一般訂單 <b style="color:var(--yellow)">+10</b>　💎 VIP 訂單 <b style="color:var(--gold)">+30</b>（連擊還會加倍）<br>
+       💢 客訴別誤點，點到扣分；放著不管沒事<br>
+       訂單沒接到會讓客人不耐流失 <b style="color:var(--red)">❤️ -1</b>，撐過 60 秒尖峰時刻！</p>
+    <p class="hint2">電腦：按數字鍵 1-9 對應櫃台　手機：直接點擊</p>
+    <button class="btn" id="startBtn">▶ 開始營業</button>
+  </div>
+
+  <div class="overlay hidden" id="overScr">
+    <h2 id="overTitle">⏰ 尖峰時刻結束</h2>
+    <div class="final" id="finalScore">$0</div>
+    <div class="newbest hidden" id="newBest">🏆 新紀錄！</div>
+    <p id="overMsg"></p>
+    <button class="btn" id="retryBtn">↻ 再戰一場</button>
+  </div>
+</div>
+
+<div class="hint">電腦：按數字鍵 1-9 對應 3×3 櫃台位置（左上到右下）／手機：直接點擊亮起的訂單</div>
+
+<script>
+(() => {
+  const N = 9;
+  const GAME_TIME = 60;          // 秒
+  const START_INTERVAL = 950;    // ms，開店時的到客間隔
+  const MIN_INTERVAL = 380;      // ms，尖峰時的到客間隔
+  const START_LIFESPAN = 1550;   // ms，訂單存活時間（開店）
+  const MIN_LIFESPAN = 780;      // ms，訂單存活時間（尖峰）
+  const MAX_ACTIVE = 4;          // 同時最多幾張訂單
+  const ICONS = { normal: '☕', vip: '💎', trouble: '💢' };
+
+  const gridEl = document.getElementById('grid');
+  const scoreEl = document.getElementById('score');
+  const comboEl = document.getElementById('combo');
+  const timeEl = document.getElementById('timeLeft');
+  const bestEl = document.getElementById('best');
+  const heartsEl = document.getElementById('hearts');
+  const timerFill = document.getElementById('timerFill');
+  const wrapEl = document.getElementById('wrap');
+  const startScr = document.getElementById('startScr');
+  const overScr = document.getElementById('overScr');
+  const overTitleEl = document.getElementById('overTitle');
+  const overMsgEl = document.getElementById('overMsg');
+  const finalScoreEl = document.getElementById('finalScore');
+  const newBestEl = document.getElementById('newBest');
+
+  let best = +(localStorage.getItem('sunlightRushBest') || 0);
+  bestEl.textContent = '$' + best;
+
+  // 建立 3x3 櫃台
+  const slotEls = [];
+  for (let i = 0; i < N; i++) {
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.innerHTML = '<span class="slot-num">' + (i + 1) + '</span>';
+    el.addEventListener('click', () => handleHit(i));
+    gridEl.appendChild(el);
+    slotEls.push(el);
+  }
+
+  let slots, score, lives, comboCount, multiplier, alive, startTime, nextSpawnAt, rafId;
+
+  function reset() {
+    slots = new Array(N).fill(null);
+    slotEls.forEach(el => { const c = el.querySelector('.cup'); if (c) c.remove(); });
+    score = 0; lives = 3; comboCount = 0; multiplier = 1;
+    updateHud(); updateHearts();
+    timerFill.style.width = '100%';
+    timeEl.textContent = GAME_TIME;
+  }
+
+  function updateHud() {
+    scoreEl.textContent = '$' + score;
+    comboEl.textContent = '×' + multiplier;
+  }
+  function updateHearts() {
+    heartsEl.textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, 3 - lives));
+  }
+
+  function progress(elapsedSec) {
+    return Math.min(elapsedSec / GAME_TIME, 1);
+  }
+  function currentInterval(elapsedSec) {
+    return START_INTERVAL - (START_INTERVAL - MIN_INTERVAL) * progress(elapsedSec);
+  }
+  function currentLifespan(elapsedSec) {
+    return START_LIFESPAN - (START_LIFESPAN - MIN_LIFESPAN) * progress(elapsedSec);
+  }
+
+  function pickType() {
+    const r = Math.random();
+    if (r < 0.16) return 'trouble';
+    if (r < 0.38) return 'vip';
+    return 'normal';
+  }
+
+  function trySpawn(elapsedSec) {
+    const activeCount = slots.filter(Boolean).length;
+    if (activeCount >= MAX_ACTIVE) return;
+    const empties = [];
+    for (let i = 0; i < N; i++) if (!slots[i]) empties.push(i);
+    if (!empties.length) return;
+    const idx = empties[Math.floor(Math.random() * empties.length)];
+    const type = pickType();
+    const lifespan = currentLifespan(elapsedSec);
+    const expireAt = performance.now() + lifespan;
+    slots[idx] = { type, expireAt, lifespan };
+    renderSlot(idx);
+  }
+
+  function renderSlot(i) {
+    const el = slotEls[i];
+    const old = el.querySelector('.cup');
+    if (old) old.remove();
+    const s = slots[i];
+    if (!s) return;
+    const cup = document.createElement('div');
+    cup.className = 'cup ' + s.type;
+    const icon = document.createElement('span');
+    icon.className = 'cup-icon';
+    icon.textContent = ICONS[s.type];
+    const ring = document.createElement('span');
+    ring.className = 'cup-ring';
+    ring.style.transitionDuration = '0ms';
+    ring.style.width = '100%';
+    cup.appendChild(icon); cup.appendChild(ring);
+    el.appendChild(cup);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        ring.style.transitionDuration = s.lifespan + 'ms';
+        ring.style.width = '0%';
+      });
+    });
+  }
+
+  function clearSlot(i) {
+    slots[i] = null;
+    const cup = slotEls[i].querySelector('.cup');
+    if (cup) cup.remove();
+  }
+
+  function flashSlot(i, cls) {
+    const el = slotEls[i];
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), 280);
+  }
+
+  function floatText(i, txt) {
+    const el = slotEls[i];
+    const f = document.createElement('div');
+    f.className = 'float-score';
+    f.textContent = txt;
+    el.appendChild(f);
+    setTimeout(() => f.remove(), 650);
+  }
+
+  function shakeScreen() {
+    wrapEl.classList.add('shake');
+    setTimeout(() => wrapEl.classList.remove('shake'), 300);
+  }
+
+  function handleHit(i) {
+    if (!alive) return;
+    const s = slots[i];
+    if (!s) return;
+    if (s.type === 'trouble') {
+      score = Math.max(0, score - 20);
+      comboCount = 0; multiplier = 1;
+      flashSlot(i, 'flash-bad');
+      shakeScreen();
+    } else {
+      const base = s.type === 'vip' ? 30 : 10;
+      comboCount++;
+      multiplier = Math.min(1 + Math.floor(comboCount / 5), 4);
+      const gained = base * multiplier;
+      score += gained;
+      flashSlot(i, 'flash-good');
+      clearSlot(i);
+      floatText(i, '+' + gained);
+      updateHud();
+      return;
+    }
+    clearSlot(i);
+    updateHud();
+  }
+
+  function loop(now) {
+    if (!alive) return;
+    const elapsedSec = (now - startTime) / 1000;
+    const remaining = GAME_TIME - elapsedSec;
+
+    if (remaining <= 0) { endGame('time'); return; }
+
+    timerFill.style.width = Math.max(0, remaining / GAME_TIME * 100) + '%';
+    timeEl.textContent = Math.ceil(remaining);
+
+    for (let i = 0; i < N; i++) {
+      const s = slots[i];
+      if (s && now >= s.expireAt) {
+        if (s.type !== 'trouble') {
+          lives--;
+          comboCount = 0; multiplier = 1;
+          flashSlot(i, 'flash-miss');
+          updateHearts();
+          if (lives <= 0) { clearSlot(i); updateHud(); endGame('lives'); return; }
+        }
+        clearSlot(i);
+        updateHud();
+      }
+    }
+
+    if (now >= nextSpawnAt) {
+      trySpawn(elapsedSec);
+      nextSpawnAt = now + currentInterval(elapsedSec);
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    reset();
+    startScr.classList.add('hidden');
+    overScr.classList.add('hidden');
+    alive = true;
+    startTime = performance.now();
+    nextSpawnAt = startTime + 300;
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function endGame(reason) {
+    alive = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    for (let i = 0; i < N; i++) clearSlot(i);
+    let isNew = false;
+    if (score > best) {
+      best = score;
+      localStorage.setItem('sunlightRushBest', best);
+      bestEl.textContent = '$' + best;
+      isNew = true;
+    }
+    finalScoreEl.textContent = '$' + score;
+    newBestEl.classList.toggle('hidden', !isNew);
+    if (reason === 'lives') {
+      overTitleEl.textContent = '😵 客人都跑光了';
+      overMsgEl.textContent = '太多客人等到不耐煩離開，明天再挑戰一次！';
+    } else {
+      overTitleEl.textContent = '⏰ 尖峰時刻結束';
+      overMsgEl.textContent = '撐過了整場尖峰，辛苦了，再挑戰更高分吧！';
+    }
+    overScr.classList.remove('hidden');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!alive) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 9) { e.preventDefault(); handleHit(n - 1); }
+  }, { passive: false });
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('retryBtn').addEventListener('click', start);
+
+  reset();
+})();
+</script>
+</body>
+</html>
