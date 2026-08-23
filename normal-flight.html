@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>常態飛行 NORMAL FLIGHT · Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --cyan: #22e0ff;
+    --red: #ff5566;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 2;
+    text-align: center;
+    padding: 16px 12px 8px;
+  }
+  .back-home {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; font-weight: 500; color: var(--green);
+    text-decoration: none; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(127,255,176,0.4); background: rgba(127,255,176,0.06);
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+    font-weight: 900; letter-spacing: 0.04em;
+    margin-top: 8px;
+    background: linear-gradient(135deg, var(--cyan), var(--green), var(--yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .game-wrap {
+    position: relative; z-index: 1;
+    width: min(94vw, 420px);
+    margin: 8px auto 0;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(34,224,255,0.3);
+    box-shadow: 0 8px 50px rgba(34,224,255,0.15);
+    background: #04060f;
+  }
+  #gameCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+    background: #04060f;
+  }
+
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px;
+    background: rgba(4,6,15,0.92);
+    text-align: center;
+    z-index: 5;
+  }
+  .overlay.hidden { display: none; }
+  .overlay .icon { font-size: 3rem; filter: drop-shadow(0 0 18px var(--cyan)); }
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.3rem; letter-spacing: 0.05em;
+    color: var(--yellow);
+  }
+  .overlay p.desc {
+    font-size: 0.82rem; color: var(--text); line-height: 1.8; max-width: 320px; font-weight: 300;
+  }
+  .overlay p.desc b { color: var(--cyan); font-weight: 500; }
+  .overlay .score-line {
+    font-family: 'Orbitron', sans-serif; font-size: 0.95rem; color: var(--green);
+  }
+  .overlay .best-line { font-size: 0.78rem; color: var(--muted); }
+  .btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em;
+    color: #fff; border: none; cursor: pointer;
+    padding: 13px 34px; border-radius: 30px;
+    background: linear-gradient(135deg, var(--cyan), #0d6f8c);
+    box-shadow: 0 4px 22px rgba(34,224,255,0.45);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.secondary {
+    background: transparent; border: 1px solid rgba(230,230,255,0.3);
+    box-shadow: none; color: var(--muted); font-size: 0.75rem; padding: 9px 22px;
+  }
+
+  .hud {
+    position: absolute; top: 10px; left: 0; right: 0;
+    display: flex; justify-content: space-between; padding: 0 14px;
+    font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--text);
+    pointer-events: none; z-index: 4; text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  }
+  .hud span.lbl { color: var(--muted); font-size: 0.6rem; display: block; }
+
+  .hint-row {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    font-size: 0.68rem; color: var(--muted); max-width: 340px;
+  }
+  .hint-row span { padding: 3px 9px; border: 1px solid rgba(102,102,170,0.4); border-radius: 12px; }
+
+  footer {
+    position: relative; z-index: 1;
+    text-align: center; padding: 18px 20px 24px;
+    font-size: 0.72rem; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="back-home">← 返回遊戲大廳</a>
+  <h1>🎈 常態飛行 NORMAL FLIGHT</h1>
+</header>
+
+<div class="game-wrap" id="gameWrap">
+  <canvas id="gameCanvas" width="400" height="640"></canvas>
+
+  <div class="hud" id="hud" style="display:none;">
+    <div><span class="lbl">分數</span><span id="hudScore">0</span></div>
+    <div style="text-align:right;"><span class="lbl">最佳</span><span id="hudBest">0</span></div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="icon">🎈</div>
+    <h2>常態飛行</h2>
+    <p class="desc">
+      熱氣球乘著亂流上升下降，穿越不斷<b>隨機遊走</b>的管制帶缺口！缺口會逐漸收窄、位置飄移不定，抓準時機點擊起飛。<br>
+      缺口內的 <b>💎數據點</b> 離中心線越遠分數越高，但一撞上邊界就觸發<b>失控訊號</b>，遊戲結束。
+    </p>
+    <div class="hint-row">
+      <span>⌨️ 空白鍵 / ↑ 起飛</span>
+      <span>📱 點擊畫面起飛</span>
+    </div>
+    <div class="best-line">歷史最佳：<b id="startBest">0</b></div>
+    <button class="btn" id="startBtn">▶ 開始起飛</button>
+  </div>
+
+  <div class="overlay hidden" id="endScreen">
+    <div class="icon">💥</div>
+    <h2>觸發失控訊號</h2>
+    <div class="score-line">本次分數：<span id="finalScore">0</span></div>
+    <div class="score-line" style="color:var(--yellow);">穿越管制帶：<span id="finalGates">0</span> 道</div>
+    <div class="best-line" id="newBestTag" style="color:var(--pink); display:none;">🎉 締造新紀錄！</div>
+    <div class="best-line">歷史最佳：<span id="endBest">0</span></div>
+    <button class="btn" id="retryBtn">↻ 再飛一次</button>
+    <a href="index.html" class="btn secondary">返回遊戲大廳</a>
+  </div>
+</div>
+
+<footer>常態飛行 · Chad's Game Zone</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  var startScreen = document.getElementById('startScreen');
+  var endScreen = document.getElementById('endScreen');
+  var hud = document.getElementById('hud');
+  var hudScoreEl = document.getElementById('hudScore');
+  var hudBestEl = document.getElementById('hudBest');
+  var startBtn = document.getElementById('startBtn');
+  var retryBtn = document.getElementById('retryBtn');
+  var startBestEl = document.getElementById('startBest');
+  var endBestEl = document.getElementById('endBest');
+  var finalScoreEl = document.getElementById('finalScore');
+  var finalGatesEl = document.getElementById('finalGates');
+  var newBestTagEl = document.getElementById('newBestTag');
+
+  var STORAGE_KEY = 'gamezone_normal_flight_best';
+  var best = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
+  startBestEl.textContent = best;
+
+  var GRAVITY = 0.42;
+  var FLAP_V = -7.6;
+  var MAX_FALL = 11;
+  var PLAYER_X = 110;
+  var PLAYER_R = 15;
+  var GATE_W = 50;
+  var GATE_SPACING = 235;
+  var BASE_SPEED = 2.7;
+  var QUEUE_SIZE = 6;
+
+  var state = 'idle'; // idle | playing | over
+  var player, gates, particles, score, gatesPassed, speed, centerY, totalSpawned;
+
+  function gaussianRandom(){
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function gapForCount(n){
+    return Math.max(118, 196 - n * 2.6);
+  }
+
+  function spawnGate(x){
+    var gapH = gapForCount(totalSpawned);
+    totalSpawned++;
+    var margin = 44;
+    centerY = centerY + gaussianRandom() * 38;
+    var minC = margin + gapH / 2;
+    var maxC = H - margin - gapH / 2;
+    if (centerY < minC) centerY = minC;
+    if (centerY > maxC) centerY = maxC;
+
+    var gate = { x: x, gapY: centerY, gapH: gapH, w: GATE_W, passed: false, coin: null };
+
+    if (Math.random() < 0.82) {
+      var offset = gaussianRandom() * (gapH * 0.22);
+      var maxOff = gapH / 2 - 20;
+      if (offset > maxOff) offset = maxOff;
+      if (offset < -maxOff) offset = -maxOff;
+      var z = Math.abs(offset) / (gapH / 2);
+      var value = Math.round(80 + z * 180);
+      gate.coin = { dy: offset, r: 11, taken: false, value: value, outlier: z > 0.55 };
+    }
+    gates.push(gate);
+  }
+
+  function fillQueue(){
+    while (gates.length < QUEUE_SIZE) {
+      var lastX = gates.length ? gates[gates.length - 1].x : (W + 80);
+      spawnGate(gates.length ? lastX + GATE_SPACING : lastX);
+    }
+  }
+
+  function resetGame(){
+    player = { y: H / 2, vy: 0, rot: 0 };
+    gates = [];
+    particles = [];
+    score = 0;
+    gatesPassed = 0;
+    speed = BASE_SPEED;
+    centerY = H / 2;
+    totalSpawned = 0;
+    fillQueue();
+  }
+
+  function collideCircleRect(cx, cy, cr, rx, ry, rw, rh){
+    var nx = Math.max(rx, Math.min(cx, rx + rw));
+    var ny = Math.max(ry, Math.min(cy, ry + rh));
+    var dx = cx - nx, dy = cy - ny;
+    return (dx * dx + dy * dy) < cr * cr;
+  }
+
+  function startGame(){
+    resetGame();
+    state = 'playing';
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    hud.style.display = 'flex';
+  }
+
+  function endGame(){
+    state = 'over';
+    hud.style.display = 'none';
+    var isNew = score > best;
+    if (isNew) {
+      best = score;
+      localStorage.setItem(STORAGE_KEY, String(best));
+    }
+    finalScoreEl.textContent = score;
+    finalGatesEl.textContent = gatesPassed;
+    endBestEl.textContent = best;
+    newBestTagEl.style.display = isNew ? 'block' : 'none';
+    endScreen.classList.remove('hidden');
+  }
+
+  function flap(){
+    if (state !== 'playing') return;
+    player.vy = FLAP_V;
+    for (var i = 0; i < 4; i++) {
+      particles.push({
+        x: PLAYER_X - 6 + Math.random() * 12,
+        y: player.y + 14,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: 1.4 + Math.random() * 1.6,
+        life: 16,
+        r: 2 + Math.random() * 2
+      });
+    }
+  }
+
+  function update(){
+    if (state !== 'playing') return;
+
+    player.vy += GRAVITY;
+    if (player.vy > MAX_FALL) player.vy = MAX_FALL;
+    player.y += player.vy;
+    player.rot = Math.max(-0.5, Math.min(1.1, player.vy * 0.09));
+
+    speed = BASE_SPEED + Math.min(gatesPassed * 0.035, 2.3);
+
+    gates.forEach(function(g){ g.x -= speed; });
+    gates = gates.filter(function(g){ return g.x + g.w > -30; });
+    fillQueue();
+
+    for (var i = 0; i < gates.length; i++) {
+      var g = gates[i];
+      if (!g.passed && g.x + g.w < PLAYER_X - PLAYER_R) {
+        g.passed = true;
+        gatesPassed++;
+        score += 100;
+      }
+      if (PLAYER_X + PLAYER_R > g.x && PLAYER_X - PLAYER_R < g.x + g.w) {
+        var topH = g.gapY - g.gapH / 2;
+        var botY = g.gapY + g.gapH / 2;
+        if (collideCircleRect(PLAYER_X, player.y, PLAYER_R * 0.8, g.x, 0, g.w, topH) ||
+            collideCircleRect(PLAYER_X, player.y, PLAYER_R * 0.8, g.x, botY, g.w, H - botY)) {
+          endGame();
+          return;
+        }
+      }
+      if (g.coin && !g.coin.taken) {
+        var coinX = g.x + g.w / 2;
+        var coinY = g.gapY + g.coin.dy;
+        var dx = PLAYER_X - coinX, dy = player.y - coinY;
+        if (dx * dx + dy * dy < (PLAYER_R + g.coin.r) * (PLAYER_R + g.coin.r)) {
+          g.coin.taken = true;
+          score += g.coin.value;
+        }
+      }
+    }
+
+    particles.forEach(function(pt){ pt.x += pt.vx; pt.y += pt.vy; pt.life--; });
+    particles = particles.filter(function(pt){ return pt.life > 0; });
+
+    hudScoreEl.textContent = score;
+    hudBestEl.textContent = best;
+
+    if (player.y - PLAYER_R < 0 || player.y + PLAYER_R > H) {
+      endGame();
+    }
+  }
+
+  function drawGate(g){
+    ctx.save();
+    ctx.fillStyle = '#22e0ff';
+    ctx.shadowColor = '#22e0ff';
+    ctx.shadowBlur = 10;
+    ctx.globalAlpha = 0.85;
+    var topH = g.gapY - g.gapH / 2;
+    var botY = g.gapY + g.gapH / 2;
+    ctx.fillRect(g.x, 0, g.w, topH);
+    ctx.fillRect(g.x, botY, g.w, H - botY);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(g.x, g.gapY);
+    ctx.lineTo(g.x + g.w, g.gapY);
+    ctx.stroke();
+    ctx.restore();
+
+    if (g.coin && !g.coin.taken) {
+      var coinX = g.x + g.w / 2, coinY = g.gapY + g.coin.dy;
+      ctx.save();
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = g.coin.outlier ? '#ff69b4' : '#ffe44d';
+      ctx.shadowBlur = 12;
+      ctx.fillText(g.coin.outlier ? '💎' : '🔸', coinX, coinY);
+      ctx.restore();
+    }
+  }
+
+  function render(){
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0a2530');
+    grad.addColorStop(1, '#04060f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    if (state === 'idle') return;
+
+    gates.forEach(drawGate);
+
+    particles.forEach(function(pt){
+      ctx.save();
+      ctx.globalAlpha = Math.max(pt.life / 16, 0);
+      ctx.fillStyle = '#9be8ff';
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    if (player) {
+      ctx.save();
+      ctx.translate(PLAYER_X, player.y);
+      ctx.rotate(player.rot * 0.5);
+      ctx.font = '34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#22e0ff';
+      ctx.shadowBlur = 16;
+      ctx.fillText('🎈', 0, 0);
+      ctx.restore();
+    }
+  }
+
+  function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('keydown', function(e){
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'ArrowUp' || e.key === 'Up') {
+      e.preventDefault();
+      flap();
+    }
+  });
+
+  canvas.addEventListener('pointerdown', function(e){ e.preventDefault(); flap(); });
+
+  startBtn.addEventListener('click', startGame);
+  retryBtn.addEventListener('click', startGame);
+
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
