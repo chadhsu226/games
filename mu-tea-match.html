@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>沐茶消消樂 MU TEA MATCH | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --gold: #ffd700;
+    --orange: #F7931A;
+    --red: #ff4d6a;
+    --text: #e8e8ff;
+    --muted: #6666aa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    touch-action: none;
+    min-height: 100vh;
+    padding-bottom: 30px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+  a.back-home {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; font-weight: 500; color: var(--green);
+    text-decoration: none; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(127,255,176,0.4); background: rgba(127,255,176,0.06);
+    margin-top: 18px; position: relative; z-index: 2;
+  }
+  a.back-home:hover { background: rgba(127,255,176,0.15); }
+
+  header { position: relative; z-index: 1; text-align: center; padding: 10px 16px 6px; }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.3rem, 5vw, 1.9rem);
+    font-weight: 900; letter-spacing: 0.03em; margin-top: 10px;
+    background: linear-gradient(135deg, var(--pink), var(--orange), var(--yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .tagline { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; margin-top: 6px; }
+
+  .hud {
+    position: relative; z-index: 1;
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    margin: 14px 0 10px; width: min(94vw, 480px);
+  }
+  .hud-box {
+    flex: 1; min-width: 96px; background: var(--bg2);
+    border: 1px solid rgba(255,105,180,0.18); border-radius: 12px;
+    padding: 8px 10px; text-align: center;
+  }
+  .hud-box .lbl { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.08em; }
+  .hud-box .val { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--yellow); margin-top: 2px; }
+  .hud-box.time .val { color: var(--green); }
+  .hud-box.best .val { color: var(--gold); }
+  .hud-box.time.low .val { color: var(--red); }
+
+  #boardWrap {
+    position: relative; z-index: 1;
+    width: min(94vw, 460px); height: min(94vw, 460px);
+    background: var(--bg2); border-radius: 16px;
+    border: 1px solid rgba(168,85,247,0.25);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    margin: 6px 0 10px; overflow: hidden;
+  }
+  #board { position: absolute; inset: 8px; }
+
+  .tile {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    font-size: 1.5rem;
+    background: rgba(255,255,255,0.03);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    transition: top 0.22s cubic-bezier(.4,1.4,.6,1), left 0.22s cubic-bezier(.4,1.4,.6,1), opacity 0.18s, transform 0.18s;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .tile.removing { opacity: 0; transform: scale(0.3) rotate(25deg); }
+  .tile.cursor { box-shadow: 0 0 0 2px var(--green), 0 0 14px rgba(127,255,176,0.6); }
+  .tile.selected { box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(255,215,0,0.8); transform: scale(1.06); }
+  .tile.invalid { animation: shakeTile 0.3s; }
+  @keyframes shakeTile {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .toast {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%);
+    z-index: 5; pointer-events: none;
+    font-family: 'Orbitron', sans-serif; font-weight: 700;
+    color: var(--yellow); text-shadow: 0 0 12px rgba(255,228,77,0.8);
+    font-size: 1.1rem; opacity: 0; white-space: nowrap;
+  }
+  .toast.show { animation: toastPop 0.9s ease-out forwards; }
+  @keyframes toastPop {
+    0% { opacity: 0; transform: translate(-50%,-40%) scale(0.7); }
+    20% { opacity: 1; transform: translate(-50%,-55%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%,-90%) scale(1); }
+  }
+
+  .reshuffle-note {
+    position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%);
+    z-index: 5; pointer-events: none; font-size: 0.75rem; color: var(--muted);
+    background: rgba(6,6,18,0.85); padding: 5px 12px; border-radius: 20px;
+    border: 1px solid rgba(102,102,170,0.3); opacity: 0;
+  }
+  .reshuffle-note.show { animation: noteFade 1.6s ease-out forwards; }
+  @keyframes noteFade {
+    0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; }
+  }
+
+  .hint {
+    position: relative; z-index: 1; font-size: 0.72rem; color: var(--muted);
+    text-align: center; max-width: 420px; line-height: 1.6; margin-bottom: 4px;
+  }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(6,6,18,0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay .emoji-big { font-size: 3.4rem; filter: drop-shadow(0 0 20px var(--pink)); }
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.4rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--pink), var(--orange), var(--yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .overlay p { font-size: 0.85rem; color: var(--text); line-height: 1.75; max-width: 340px; }
+  .overlay .stat-line { font-size: 0.82rem; color: var(--muted); }
+  .overlay .stat-line b { color: var(--gold); }
+  .overlay-btn {
+    font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 0.9rem;
+    padding: 12px 34px; border-radius: 10px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #ff69b4, #F7931A); color: #1a0a08;
+    letter-spacing: 0.05em; box-shadow: 0 6px 20px rgba(255,105,180,0.35);
+  }
+  .overlay-btn:active { transform: scale(0.96); }
+  .overlay-btn.secondary {
+    background: transparent; color: var(--green);
+    border: 1px solid rgba(127,255,176,0.4); box-shadow: none;
+  }
+
+  footer { position: relative; z-index: 1; font-size: 0.72rem; color: var(--muted); padding: 10px 20px; text-align: center; }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-home">← 返回列表</a>
+
+<header>
+  <h1>沐茶消消樂 MU TEA MATCH</h1>
+  <p class="tagline">滑動配料 · 湊出三連 · 衝高今日營業額</p>
+</header>
+
+<div class="hud">
+  <div class="hud-box">
+    <div class="lbl">營業額</div>
+    <div class="val" id="scoreVal">NT$0</div>
+  </div>
+  <div class="hud-box time">
+    <div class="lbl">營業時間</div>
+    <div class="val" id="timeVal">90</div>
+  </div>
+  <div class="hud-box best">
+    <div class="lbl">最佳紀錄</div>
+    <div class="val" id="bestVal">NT$0</div>
+  </div>
+</div>
+
+<div id="boardWrap">
+  <div id="board"></div>
+  <div class="toast" id="toast"></div>
+  <div class="reshuffle-note" id="reshuffleNote">沒有配方了，重新排列配料！</div>
+</div>
+
+<p class="hint">🖱️ 點兩顆相鄰配料交換，或滑動拖曳交換　⌨️ 方向鍵移動、Enter/空白鍵選取交換</p>
+
+<div class="overlay" id="startOverlay">
+  <div class="emoji-big">🧋</div>
+  <h2>沐茶消消樂</h2>
+  <p>交換相鄰的配料，湊齊三個以上相同種類即可消除賺取營業額！連鎖消除可觸發「翻桌率」加成，90 秒內衝出最高業績吧。</p>
+  <p class="stat-line">歷史最佳營業額：<b id="startBest">NT$0</b></p>
+  <button class="overlay-btn" id="startBtn">▶ 開始營業</button>
+</div>
+
+<div class="overlay hidden" id="overOverlay">
+  <div class="emoji-big">🧾</div>
+  <h2>今日打烊</h2>
+  <p class="stat-line">本次營業額：<b id="finalScore">NT$0</b></p>
+  <p class="stat-line">歷史最佳：<b id="finalBest">NT$0</b></p>
+  <p class="stat-line" id="newBestTag" style="display:none; color: var(--gold);">🎉 締造新紀錄！</p>
+  <button class="overlay-btn" id="restartBtn">🔄 明日重新開張</button>
+</div>
+
+<footer>沐茶消消樂 · Chad's Game Zone</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var ROWS = 8, COLS = 8;
+  var TYPES = [
+    { emoji: '🧋', color: '#F7931A' },
+    { emoji: '🍵', color: '#7fffb0' },
+    { emoji: '🍋', color: '#ffe44d' },
+    { emoji: '🍯', color: '#ffb84d' },
+    { emoji: '🍓', color: '#ff69b4' },
+    { emoji: '🧊', color: '#a855f7' }
+  ];
+  var TIME_START = 90;
+  var SWAP_MS = 220, REMOVE_MS = 220, FALL_MS = 260;
+  var BEST_KEY = 'muTeaMatchBest';
+
+  var boardWrap = document.getElementById('boardWrap');
+  var boardEl = document.getElementById('board');
+  var toastEl = document.getElementById('toast');
+  var reshuffleNote = document.getElementById('reshuffleNote');
+  var scoreVal = document.getElementById('scoreVal');
+  var timeVal = document.getElementById('timeVal');
+  var bestVal = document.getElementById('bestVal');
+  var timeBox = document.querySelector('.hud-box.time');
+  var startOverlay = document.getElementById('startOverlay');
+  var overOverlay = document.getElementById('overOverlay');
+  var startBtn = document.getElementById('startBtn');
+  var restartBtn = document.getElementById('restartBtn');
+  var startBest = document.getElementById('startBest');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+  var newBestTag = document.getElementById('newBestTag');
+
+  var grid = [];
+  var cellPx = 0, tileSize = 0;
+  var score = 0, best = +(localStorage.getItem(BEST_KEY) || 0);
+  var timeLeft = TIME_START;
+  var timerId = null;
+  var busy = false;
+  var running = false;
+  var selected = null;
+  var cursor = { row: 0, col: 0 };
+  var dragStart = null;
+
+  bestVal.textContent = 'NT$' + best;
+  startBest.textContent = 'NT$' + best;
+
+  function fmt(n) { return 'NT$' + n; }
+
+  function layout() {
+    var rect = boardEl.getBoundingClientRect();
+    cellPx = rect.width / COLS;
+    tileSize = cellPx - 6;
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var t = grid[r] && grid[r][c];
+        if (t) placeTile(t, r, c, false);
+      }
+    }
+  }
+
+  function placeTile(t, row, col, animateFromAbove) {
+    t.row = row; t.col = col;
+    t.el.style.width = tileSize + 'px';
+    t.el.style.height = tileSize + 'px';
+    t.el.style.left = (col * cellPx + 3) + 'px';
+    if (animateFromAbove) {
+      t.el.style.top = (-1 * (animateFromAbove) * cellPx) + 'px';
+      var target = (row * cellPx + 3) + 'px';
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { t.el.style.top = target; });
+      });
+    } else {
+      t.el.style.top = (row * cellPx + 3) + 'px';
+    }
+  }
+
+  function randType() { return Math.floor(Math.random() * TYPES.length); }
+
+  function randTypeAvoiding(r, c) {
+    var tries = 0, t;
+    do {
+      t = randType();
+      tries++;
+    } while (tries < 40 && (
+      (c >= 2 && grid[r][c - 1] && grid[r][c - 2] && grid[r][c - 1].type === t && grid[r][c - 2].type === t) ||
+      (r >= 2 && grid[r - 1][c] && grid[r - 2][c] && grid[r - 1][c].type === t && grid[r - 2][c].type === t)
+    ));
+    return t;
+  }
+
+  function createTile(type) {
+    var el = document.createElement('div');
+    el.className = 'tile';
+    el.textContent = TYPES[type].emoji;
+    el.style.color = TYPES[type].color;
+    boardEl.appendChild(el);
+    var tile = { type: type, el: el, row: 0, col: 0 };
+    el.addEventListener('pointerdown', function (e) { onPointerDown(e, tile); });
+    el.addEventListener('pointerup', function (e) { onPointerUp(e, tile); });
+    return tile;
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    grid = [];
+    for (var r = 0; r < ROWS; r++) {
+      grid.push([]);
+      for (var c = 0; c < COLS; c++) {
+        var type = randTypeAvoiding(r, c);
+        var tile = createTile(type);
+        grid[r].push(tile);
+      }
+    }
+    layout();
+    if (!hasAnyValidMove()) buildBoard();
+  }
+
+  function isAdjacent(a, b) {
+    var dr = Math.abs(a.row - b.row), dc = Math.abs(a.col - b.col);
+    return dr + dc === 1;
+  }
+
+  function swapTiles(a, b) {
+    var ta = grid[a.row][a.col], tb = grid[b.row][b.col];
+    grid[a.row][a.col] = tb; grid[b.row][b.col] = ta;
+    placeTile(tb, a.row, a.col, false);
+    placeTile(ta, b.row, b.col, false);
+  }
+
+  function swapTypesOnly(r1, c1, r2, c2) {
+    var t = grid[r1][c1].type;
+    grid[r1][c1].type = grid[r2][c2].type;
+    grid[r2][c2].type = t;
+  }
+
+  function findMatches() {
+    var matched = {};
+    var groups = [];
+    var r, c, runStart;
+    for (r = 0; r < ROWS; r++) {
+      runStart = 0;
+      for (c = 1; c <= COLS; c++) {
+        var same = c < COLS && grid[r][c] && grid[r][c - 1] && grid[r][c].type === grid[r][c - 1].type;
+        if (!same) {
+          var len = c - runStart;
+          if (len >= 3) {
+            var g = [];
+            for (var k = runStart; k < c; k++) { matched[r + ',' + k] = true; g.push(r + ',' + k); }
+            groups.push(g);
+          }
+          runStart = c;
+        }
+      }
+    }
+    for (c = 0; c < COLS; c++) {
+      runStart = 0;
+      for (r = 1; r <= ROWS; r++) {
+        var same2 = r < ROWS && grid[r][c] && grid[r - 1][c] && grid[r][c].type === grid[r - 1][c].type;
+        if (!same2) {
+          var len2 = r - runStart;
+          if (len2 >= 3) {
+            var g2 = [];
+            for (var k2 = runStart; k2 < r; k2++) { matched[k2 + ',' + c] = true; g2.push(k2 + ',' + c); }
+            groups.push(g2);
+          }
+          runStart = r;
+        }
+      }
+    }
+    return { matched: matched, groups: groups };
+  }
+
+  function hasAnyValidMove() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (c + 1 < COLS) {
+          swapTypesOnly(r, c, r, c + 1);
+          var has1 = Object.keys(findMatches().matched).length > 0;
+          swapTypesOnly(r, c, r, c + 1);
+          if (has1) return true;
+        }
+        if (r + 1 < ROWS) {
+          swapTypesOnly(r, c, r + 1, c);
+          var has2 = Object.keys(findMatches().matched).length > 0;
+          swapTypesOnly(r, c, r + 1, c);
+          if (has2) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function reshuffleBoard() {
+    var pool = [];
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) pool.push(grid[r][c].type);
+    var tries = 0;
+    do {
+      for (var i = pool.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      }
+      var idx = 0;
+      for (var r2 = 0; r2 < ROWS; r2++) {
+        for (var c2 = 0; c2 < COLS; c2++) {
+          grid[r2][c2].type = pool[idx++];
+          grid[r2][c2].el.textContent = TYPES[grid[r2][c2].type].emoji;
+          grid[r2][c2].el.style.color = TYPES[grid[r2][c2].type].color;
+        }
+      }
+      tries++;
+    } while (tries < 30 && (Object.keys(findMatches().matched).length > 0 || !hasAnyValidMove()));
+    showReshuffleNote();
+  }
+
+  function showReshuffleNote() {
+    reshuffleNote.classList.remove('show');
+    void reshuffleNote.offsetWidth;
+    reshuffleNote.classList.add('show');
+  }
+
+  function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.remove('show');
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+  }
+
+  function addScore(n) {
+    score += n;
+    scoreVal.textContent = fmt(score);
+  }
+
+  function resolveMatches(matchInfo, comboLevel) {
+    var groups = matchInfo.groups;
+    var gained = 0;
+    for (var i = 0; i < groups.length; i++) {
+      var len = groups[i].length;
+      var pts = len * 10 * comboLevel;
+      if (len >= 4) pts += 30;
+      if (len >= 5) pts += 100;
+      gained += pts;
+    }
+    addScore(gained);
+    if (comboLevel === 1) {
+      showToast('+' + fmt(gained));
+    } else {
+      showToast('翻桌率 ×' + comboLevel + '！ +' + fmt(gained));
+      if (comboLevel >= 3 && running) {
+        timeLeft = Math.min(TIME_START, timeLeft + 2);
+        updateTimeDisplay();
+      }
+    }
+
+    var keys = Object.keys(matchInfo.matched);
+    keys.forEach(function (key) {
+      var parts = key.split(',');
+      var r = +parts[0], c = +parts[1];
+      if (grid[r][c]) grid[r][c].el.classList.add('removing');
+    });
+
+    setTimeout(function () {
+      keys.forEach(function (key) {
+        var parts = key.split(',');
+        var r = +parts[0], c = +parts[1];
+        if (grid[r][c]) {
+          grid[r][c].el.remove();
+          grid[r][c] = null;
+        }
+      });
+      cascade();
+      setTimeout(function () {
+        var next = findMatches();
+        if (Object.keys(next.matched).length > 0) {
+          resolveMatches(next, comboLevel + 1);
+        } else {
+          busy = false;
+          if (running && !hasAnyValidMove()) reshuffleBoard();
+        }
+      }, FALL_MS);
+    }, REMOVE_MS);
+  }
+
+  function cascade() {
+    for (var c = 0; c < COLS; c++) {
+      var writeRow = ROWS - 1;
+      for (var r = ROWS - 1; r >= 0; r--) {
+        if (grid[r][c]) {
+          if (writeRow !== r) {
+            grid[writeRow][c] = grid[r][c];
+            grid[r][c] = null;
+            placeTile(grid[writeRow][c], writeRow, c, false);
+          }
+          writeRow--;
+        }
+      }
+      var spawnGap = writeRow + 1;
+      var k = 1;
+      for (var r2 = writeRow; r2 >= 0; r2--) {
+        var type = randType();
+        var tile = createTile(type);
+        grid[r2][c] = tile;
+        placeTile(tile, r2, c, spawnGap - r2 + 1);
+        k++;
+      }
+    }
+  }
+
+  function clearHighlights() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var t = grid[r][c];
+        if (!t) continue;
+        t.el.classList.remove('cursor', 'selected');
+      }
+    }
+  }
+
+  function refreshHighlights() {
+    clearHighlights();
+    var cur = grid[cursor.row] && grid[cursor.row][cursor.col];
+    if (cur) cur.el.classList.add('cursor');
+    if (selected) {
+      var sel = grid[selected.row][selected.col];
+      if (sel) sel.el.classList.add('selected');
+    }
+  }
+
+  function attemptSwap(a, b) {
+    if (busy || !running) return;
+    if (!isAdjacent(a, b)) { selected = { row: b.row, col: b.col }; refreshHighlights(); return; }
+    busy = true;
+    selected = null;
+    swapTiles(a, b);
+    setTimeout(function () {
+      var m = findMatches();
+      if (Object.keys(m.matched).length > 0) {
+        resolveMatches(m, 1);
+      } else {
+        var ta = grid[a.row][a.col], tb = grid[b.row][b.col];
+        ta.el.classList.add('invalid'); tb.el.classList.add('invalid');
+        swapTiles(a, b);
+        setTimeout(function () {
+          ta.el.classList.remove('invalid'); tb.el.classList.remove('invalid');
+          busy = false;
+          refreshHighlights();
+        }, SWAP_MS);
+      }
+    }, SWAP_MS);
+  }
+
+  function tapTile(pos) {
+    if (busy || !running) return;
+    if (!selected) {
+      selected = pos;
+      refreshHighlights();
+      return;
+    }
+    if (selected.row === pos.row && selected.col === pos.col) {
+      selected = null;
+      refreshHighlights();
+      return;
+    }
+    if (isAdjacent(selected, pos)) {
+      var a = selected, b = pos;
+      selected = null;
+      attemptSwap(a, b);
+    } else {
+      selected = pos;
+      refreshHighlights();
+    }
+  }
+
+  function onPointerDown(e, tile) {
+    if (!running || busy) return;
+    dragStart = { row: tile.row, col: tile.col, x: e.clientX, y: e.clientY };
+  }
+
+  function onPointerUp(e, tile) {
+    if (!dragStart || !running) { dragStart = null; return; }
+    var dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+    var start = { row: dragStart.row, col: dragStart.col };
+    dragStart = null;
+    var threshold = Math.max(14, cellPx * 0.28);
+    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+      tapTile(start);
+      return;
+    }
+    var dr = 0, dc = 0;
+    if (Math.abs(dx) > Math.abs(dy)) { dc = dx > 0 ? 1 : -1; } else { dr = dy > 0 ? 1 : -1; }
+    var target = { row: start.row + dr, col: start.col + dc };
+    if (target.row < 0 || target.row >= ROWS || target.col < 0 || target.col >= COLS) return;
+    selected = null;
+    attemptSwap(start, target);
+  }
+
+  function onKeyDown(e) {
+    if (!running) return;
+    var handled = true;
+    switch (e.key) {
+      case 'ArrowUp': cursor.row = Math.max(0, cursor.row - 1); break;
+      case 'ArrowDown': cursor.row = Math.min(ROWS - 1, cursor.row + 1); break;
+      case 'ArrowLeft': cursor.col = Math.max(0, cursor.col - 1); break;
+      case 'ArrowRight': cursor.col = Math.min(COLS - 1, cursor.col + 1); break;
+      case 'Enter':
+      case ' ':
+        tapTile({ row: cursor.row, col: cursor.col });
+        break;
+      case 'Escape':
+        selected = null;
+        break;
+      default:
+        handled = false;
+    }
+    if (handled) {
+      e.preventDefault();
+      refreshHighlights();
+    }
+  }
+
+  function updateTimeDisplay() {
+    timeVal.textContent = Math.max(0, Math.ceil(timeLeft));
+    if (timeLeft <= 15) timeBox.classList.add('low'); else timeBox.classList.remove('low');
+  }
+
+  function tick() {
+    if (!running) return;
+    timeLeft -= 1;
+    updateTimeDisplay();
+    if (timeLeft <= 0) {
+      endGame();
+    }
+  }
+
+  function startGame() {
+    score = 0;
+    scoreVal.textContent = fmt(0);
+    timeLeft = TIME_START;
+    updateTimeDisplay();
+    timeBox.classList.remove('low');
+    busy = false;
+    selected = null;
+    cursor = { row: 0, col: 0 };
+    buildBoard();
+    refreshHighlights();
+    running = true;
+    startOverlay.classList.add('hidden');
+    overOverlay.classList.add('hidden');
+    clearInterval(timerId);
+    timerId = setInterval(tick, 1000);
+  }
+
+  function endGame() {
+    running = false;
+    clearInterval(timerId);
+    var isNew = score > best;
+    if (isNew) {
+      best = score;
+      localStorage.setItem(BEST_KEY, String(best));
+    }
+    bestVal.textContent = fmt(best);
+    finalScore.textContent = fmt(score);
+    finalBest.textContent = fmt(best);
+    newBestTag.style.display = isNew ? 'block' : 'none';
+    overOverlay.classList.remove('hidden');
+  }
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('resize', function () { if (grid.length) layout(); });
+
+  // idle preview board behind start overlay
+  buildBoard();
+})();
+</script>
+</body>
+</html>
