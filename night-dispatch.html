@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>星夜客運：出車賭局 | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --teal: #2dd4bf;
+    --teal-dark: #0e7a6e;
+    --red: #ff5566;
+    --text: #e8e8ff;
+    --muted: #8888bb;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 90%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 640px; margin: 0 auto;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  .back-home {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; font-weight: 500; color: var(--teal);
+    text-decoration: none; padding: 7px 16px; border-radius: 20px;
+    border: 1px solid rgba(45,212,191,0.4);
+    background: rgba(45,212,191,0.06);
+    margin-bottom: 22px; align-self: flex-start;
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .back-home:hover { background: rgba(45,212,191,0.15); box-shadow: 0 0 16px rgba(45,212,191,0.35); }
+
+  .title-row { text-align: center; margin-bottom: 8px; }
+  .title-icon {
+    font-size: 2.6rem; display: inline-block;
+    filter: drop-shadow(0 0 18px var(--teal));
+    animation: floaty 3.2s ease-in-out infinite;
+  }
+  @keyframes floaty { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.3rem, 5vw, 2rem);
+    font-weight: 900; letter-spacing: 0.03em;
+    background: linear-gradient(135deg, var(--teal), var(--green), var(--yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin: 6px 0 4px;
+  }
+  .subtitle { text-align: center; font-size: 0.82rem; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 26px; }
+
+  .panel {
+    background: var(--bg2);
+    border: 1px solid rgba(45,212,191,0.22);
+    border-radius: 18px;
+    padding: 26px 22px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Start screen ── */
+  .rules {
+    font-size: 0.86rem; line-height: 1.9; color: var(--text); margin: 18px 0 22px;
+    background: rgba(45,212,191,0.06);
+    border: 1px dashed rgba(45,212,191,0.3);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .rules b { color: var(--teal); }
+  .rules .bust { color: var(--red); font-weight: 700; }
+
+  .stat-row {
+    display: flex; justify-content: center; gap: 28px;
+    margin: 18px 0 24px; flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat .label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .stat .value { font-family: 'Orbitron', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--yellow); }
+
+  .btn {
+    display: block; width: 100%; text-align: center;
+    padding: 15px; border-radius: 12px; border: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 1rem; font-weight: 700; letter-spacing: 0.05em;
+    cursor: pointer; color: #04120a;
+    transition: transform 0.12s, opacity 0.12s, box-shadow 0.12s;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-teal { background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: #04201c; box-shadow: 0 4px 20px rgba(45,212,191,0.25); }
+  .btn-teal:not(:disabled):hover { box-shadow: 0 4px 28px rgba(45,212,191,0.45); }
+  .btn-gold { background: linear-gradient(135deg, var(--yellow), #c89a00); color: #241a00; box-shadow: 0 4px 20px rgba(255,228,77,0.2); }
+  .btn-gold:not(:disabled):hover { box-shadow: 0 4px 28px rgba(255,228,77,0.4); }
+  .btn-ghost {
+    background: transparent; border: 1px solid rgba(232,232,255,0.3); color: var(--text);
+    box-shadow: none;
+  }
+  .btn-ghost:hover { background: rgba(232,232,255,0.08); }
+
+  .btn-row { display: flex; gap: 12px; margin-top: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  /* ── Game screen ── */
+  .hud {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 22px;
+  }
+  .hud .cell {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 8px; text-align: center;
+  }
+  .hud .cell .label { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+  .hud .cell .value { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 700; }
+  .hud .cell.shift .value { color: var(--teal); }
+  .hud .cell.total .value { color: var(--yellow); }
+  .hud .cell.best .value { color: var(--purple); }
+
+  .bus-stage {
+    position: relative;
+    height: 150px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    border-radius: 14px;
+    background: radial-gradient(ellipse at 50% 60%, #0a1f2a 0%, #04080f 75%);
+    border: 1px solid rgba(45,212,191,0.15);
+    overflow: hidden;
+  }
+  .bus-emoji {
+    font-size: 4rem;
+    transition: transform 0.08s;
+    filter: drop-shadow(0 0 14px var(--teal));
+  }
+  .bus-emoji.rolling { animation: shake 0.08s linear infinite; }
+  @keyframes shake {
+    0% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(-4px) rotate(-3deg); }
+    75% { transform: translateX(4px) rotate(3deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+  }
+  .bus-emoji.bust { filter: drop-shadow(0 0 18px var(--red)); animation: bustshake 0.4s ease; }
+  @keyframes bustshake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-10px) rotate(-6deg); }
+    40% { transform: translateX(10px) rotate(6deg); }
+    60% { transform: translateX(-6px) rotate(-3deg); }
+    80% { transform: translateX(6px) rotate(3deg); }
+  }
+  .dice-face {
+    position: absolute; top: 10px; right: 14px;
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.6rem;
+    color: var(--yellow); background: rgba(0,0,0,0.4);
+    border-radius: 10px; padding: 6px 12px;
+    border: 1px solid rgba(255,228,77,0.3);
+  }
+
+  .msg-line {
+    min-height: 24px; text-align: center; font-size: 0.9rem; font-weight: 500;
+    margin-bottom: 14px; color: var(--text);
+  }
+  .msg-line.bust-text { color: var(--red); font-weight: 700; }
+  .msg-line.bank-text { color: var(--green); font-weight: 700; }
+
+  .ev-hint {
+    font-size: 0.76rem; color: var(--muted); text-align: center;
+    line-height: 1.6; margin-bottom: 18px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .ev-hint b { color: var(--teal); }
+  .ev-hint .suggest { color: var(--yellow); font-weight: 700; }
+
+  /* ── End screen ── */
+  .end-title {
+    font-family: 'Orbitron', sans-serif; font-size: 1.4rem; font-weight: 900;
+    text-align: center; margin-bottom: 6px;
+    color: var(--yellow);
+  }
+  .end-sub { text-align: center; font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; }
+  .end-total {
+    text-align: center; font-family: 'Orbitron', sans-serif;
+    font-size: 2.2rem; font-weight: 900; color: var(--teal);
+    margin-bottom: 6px; text-shadow: 0 0 24px rgba(45,212,191,0.5);
+  }
+  .end-record {
+    text-align: center; font-size: 0.85rem; color: var(--purple); font-weight: 700;
+    margin-bottom: 24px; min-height: 20px;
+  }
+
+  footer {
+    position: relative; z-index: 1; text-align: center;
+    padding: 30px 20px 10px; font-size: 0.72rem; color: var(--muted);
+  }
+
+  @media (max-width: 420px) {
+    .stat-row { gap: 18px; }
+    .hud { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a href="index.html" class="back-home">← 返回遊戲大廳</a>
+
+  <div class="title-row">
+    <div class="title-icon">🌙🚌</div>
+    <h1>星夜客運：出車賭局</h1>
+    <p class="subtitle">NIGHT DISPATCH · push your luck</p>
+  </div>
+
+  <div class="panel">
+
+    <!-- Start Screen -->
+    <div id="screen-start" class="screen active">
+      <div class="rules">
+        你是星夜客運的今晚調度員。每個班次可以選擇 <b>發車</b> 賺取車資，或是 <b>收班</b> 把目前這班的收入存進總營收。<br><br>
+        每次發車會擲一顆骰子：骰到 2～6，車資（×100 元）會加進「本班收入」，可以繼續發車衝更高；但骰到 <span class="bust">1</span>，代表班車拋錨，<b>本班收入直接歸零</b>，直接進入下一班。<br><br>
+        總共 <b>8 個班次</b>，全部跑完後看你能衝出多少總營收，並挑戦自己的最高紀錄！
+      </div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="label">最高紀錄</div>
+          <div class="value" id="start-best">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">班次</div>
+          <div class="value">8</div>
+        </div>
+      </div>
+      <button class="btn btn-teal" id="btn-start">▶ 開始今晚的班表</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen">
+      <div class="hud">
+        <div class="cell shift">
+          <div class="label">夜班</div>
+          <div class="value"><span id="hud-shift">1</span> / 8</div>
+        </div>
+        <div class="cell total">
+          <div class="label">總營收</div>
+          <div class="value" id="hud-total">0</div>
+        </div>
+        <div class="cell best">
+          <div class="label">最高紀錄</div>
+          <div class="value" id="hud-best">0</div>
+        </div>
+      </div>
+
+      <div class="bus-stage">
+        <div class="dice-face" id="dice-face">--</div>
+        <div class="bus-emoji" id="bus-emoji">🚌</div>
+      </div>
+
+      <div class="msg-line" id="msg-line">準備好了嗎？點「發車」開始這一班。</div>
+
+      <div class="stat-row" style="margin: 0 0 16px;">
+        <div class="stat">
+          <div class="label">本班收入</div>
+          <div class="value" id="hud-shift-earnings">0</div>
+        </div>
+      </div>
+
+      <div class="ev-hint" id="ev-hint">
+        每次發車：5/6 機率賺 200～600 元，1/6 機率本班歸零。<b>本班累積越多，繼續發車的風險越大。</b>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-teal" id="btn-roll">🎲 發車</button>
+        <button class="btn btn-gold" id="btn-bank">💰 收班入帳</button>
+      </div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="screen-end" class="screen">
+      <div class="end-title">🏁 今晚收班</div>
+      <div class="end-sub">8 個班次全部跑完了</div>
+      <div class="end-total" id="end-total">0</div>
+      <div class="end-record" id="end-record"></div>
+      <div class="btn-row">
+        <button class="btn btn-teal" id="btn-again">🔁 再跑一晚</button>
+        <a href="index.html" class="btn btn-ghost" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">返回大廳</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>Chad's Game Zone · 星夜客運：出車賭局</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOTAL_SHIFTS = 8;
+  var STORAGE_KEY = 'nightDispatchBest';
+
+  var state = {
+    shift: 1,
+    shiftEarnings: 0,
+    totalEarnings: 0,
+    rolling: false
+  };
+
+  var screenStart = document.getElementById('screen-start');
+  var screenGame = document.getElementById('screen-game');
+  var screenEnd = document.getElementById('screen-end');
+
+  var startBestEl = document.getElementById('start-best');
+  var hudShiftEl = document.getElementById('hud-shift');
+  var hudTotalEl = document.getElementById('hud-total');
+  var hudBestEl = document.getElementById('hud-best');
+  var hudShiftEarningsEl = document.getElementById('hud-shift-earnings');
+  var msgLineEl = document.getElementById('msg-line');
+  var evHintEl = document.getElementById('ev-hint');
+  var diceFaceEl = document.getElementById('dice-face');
+  var busEmojiEl = document.getElementById('bus-emoji');
+  var endTotalEl = document.getElementById('end-total');
+  var endRecordEl = document.getElementById('end-record');
+
+  var btnStart = document.getElementById('btn-start');
+  var btnRoll = document.getElementById('btn-roll');
+  var btnBank = document.getElementById('btn-bank');
+  var btnAgain = document.getElementById('btn-again');
+
+  function getBest() {
+    var v = 0;
+    try {
+      v = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+    } catch (e) {
+      v = 0;
+    }
+    return isNaN(v) ? 0 : v;
+  }
+
+  function setBest(v) {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(v));
+    } catch (e) {
+      /* localStorage unavailable, ignore */
+    }
+  }
+
+  function fmt(n) {
+    return n.toLocaleString('zh-Hant-TW');
+  }
+
+  function showScreen(el) {
+    screenStart.classList.remove('active');
+    screenGame.classList.remove('active');
+    screenEnd.classList.remove('active');
+    el.classList.add('active');
+  }
+
+  function updateEvHint() {
+    var expectedGain = (5 / 6) * 400 - (1 / 6) * state.shiftEarnings;
+    var suggestion = expectedGain > 0 ? '建議：再發一班（期望值為正）' : '建議：收班入帳比較划算了';
+    evHintEl.innerHTML = '再發一班的期望損益約 <b>' + (expectedGain >= 0 ? '+' : '') + Math.round(expectedGain) + ' 元</b>。<br><span class="suggest">' + suggestion + '</span>';
+  }
+
+  function refreshHud() {
+    hudShiftEl.textContent = String(state.shift);
+    hudTotalEl.textContent = fmt(state.totalEarnings);
+    hudBestEl.textContent = fmt(getBest());
+    hudShiftEarningsEl.textContent = fmt(state.shiftEarnings);
+    updateEvHint();
+  }
+
+  function resetGame() {
+    state.shift = 1;
+    state.shiftEarnings = 0;
+    state.totalEarnings = 0;
+    state.rolling = false;
+    diceFaceEl.textContent = '--';
+    busEmojiEl.className = 'bus-emoji';
+    msgLineEl.className = 'msg-line';
+    msgLineEl.textContent = '準備好了嗎？點「發車」開始這一班。';
+    btnRoll.disabled = false;
+    btnBank.disabled = false;
+    refreshHud();
+  }
+
+  function startGame() {
+    resetGame();
+    showScreen(screenGame);
+  }
+
+  function advanceShiftOrEnd() {
+    state.shift += 1;
+    if (state.shift > TOTAL_SHIFTS) {
+      endGame();
+    } else {
+      refreshHud();
+      msgLineEl.className = 'msg-line';
+      msgLineEl.textContent = '第 ' + state.shift + ' 班，準備發車。';
+    }
+  }
+
+  function doRoll() {
+    if (state.rolling) return;
+    state.rolling = true;
+    btnRoll.disabled = true;
+    btnBank.disabled = true;
+    busEmojiEl.className = 'bus-emoji rolling';
+    msgLineEl.className = 'msg-line';
+    msgLineEl.textContent = '發車中…';
+
+    var ticks = 0;
+    var maxTicks = 9;
+    var rollTimer = setInterval(function () {
+      diceFaceEl.textContent = String(1 + Math.floor(Math.random() * 6));
+      ticks += 1;
+      if (ticks >= maxTicks) {
+        clearInterval(rollTimer);
+        finishRoll();
+      }
+    }, 60);
+  }
+
+  function finishRoll() {
+    var roll = 1 + Math.floor(Math.random() * 6);
+    diceFaceEl.textContent = String(roll);
+    busEmojiEl.className = 'bus-emoji';
+
+    if (roll === 1) {
+      state.shiftEarnings = 0;
+      busEmojiEl.className = 'bus-emoji bust';
+      msgLineEl.className = 'msg-line bust-text';
+      msgLineEl.textContent = '💥 骰到 1，班車拋錨！本班收入歸零。';
+      refreshHud();
+      state.rolling = false;
+      setTimeout(function () {
+        advanceShiftOrEnd();
+        btnRoll.disabled = false;
+        btnBank.disabled = false;
+      }, 1100);
+    } else {
+      var gain = roll * 100;
+      state.shiftEarnings += gain;
+      msgLineEl.className = 'msg-line';
+      msgLineEl.textContent = '骰到 ' + roll + '，賺進 ' + fmt(gain) + ' 元車資！';
+      refreshHud();
+      state.rolling = false;
+      btnRoll.disabled = false;
+      btnBank.disabled = false;
+    }
+  }
+
+  function doBank() {
+    if (state.rolling) return;
+    if (state.shiftEarnings > 0) {
+      state.totalEarnings += state.shiftEarnings;
+      msgLineEl.className = 'msg-line bank-text';
+      msgLineEl.textContent = '💰 已收班入帳 ' + fmt(state.shiftEarnings) + ' 元！';
+    } else {
+      msgLineEl.className = 'msg-line';
+      msgLineEl.textContent = '這班還沒有收入，先發車看看吧。';
+      return;
+    }
+    state.shiftEarnings = 0;
+    btnRoll.disabled = true;
+    btnBank.disabled = true;
+    refreshHud();
+    setTimeout(function () {
+      advanceShiftOrEnd();
+      btnRoll.disabled = false;
+      btnBank.disabled = false;
+    }, 800);
+  }
+
+  function endGame() {
+    var best = getBest();
+    var isNewBest = state.totalEarnings > best;
+    if (isNewBest) {
+      setBest(state.totalEarnings);
+    }
+    endTotalEl.textContent = fmt(state.totalEarnings) + ' 元';
+    endRecordEl.textContent = isNewBest ? '🎉 新紀錄！刷新最高總營收' : ('最高紀錄：' + fmt(getBest()) + ' 元');
+    showScreen(screenEnd);
+  }
+
+  btnStart.addEventListener('click', startGame);
+  btnRoll.addEventListener('click', doRoll);
+  btnBank.addEventListener('click', doBank);
+  btnAgain.addEventListener('click', startGame);
+
+  document.addEventListener('keydown', function (e) {
+    if (screenGame.classList.contains('active')) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        doRoll();
+      } else if (e.code === 'Enter') {
+        e.preventDefault();
+        doBank();
+      }
+    } else if (screenStart.classList.contains('active')) {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        startGame();
+      }
+    } else if (screenEnd.classList.contains('active')) {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        startGame();
+      }
+    }
+  });
+
+  startBestEl.textContent = fmt(getBest());
+})();
+</script>
+
+</body>
+</html>
