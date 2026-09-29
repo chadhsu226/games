@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>沐茶：區間捕手 INTERVAL CATCHER | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --bg2: #0d0d24;
+    --pink: #ff69b4;
+    --yellow: #ffe44d;
+    --green: #7fffb0;
+    --purple: #a855f7;
+    --cyan: #22e0ff;
+    --gold: #ffc940;
+    --red: #ff5566;
+    --text: #e8e8ff;
+    --muted: #8888bb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .wrap {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px 8px 16px;
+    user-select: none; -webkit-user-select: none;
+  }
+  .topbar {
+    width: min(94vw, 440px);
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+  .back:hover { color: var(--pink); }
+  h1 {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: 0.95rem; letter-spacing: 0.08em;
+    color: var(--cyan); text-shadow: 0 0 10px rgba(34,224,255,0.6);
+  }
+  .hud {
+    width: min(94vw, 440px);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    margin-bottom: 6px;
+  }
+  .hud div {
+    background: rgba(13,13,36,0.85);
+    border: 1px solid rgba(34,224,255,0.25);
+    border-radius: 8px; padding: 4px 6px; text-align: center;
+  }
+  .hud small { display: block; font-size: 0.62rem; color: var(--muted); }
+  .hud b { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; }
+  #hScore { color: var(--yellow); }
+  #hWave { color: var(--purple); }
+  #hLives { color: var(--pink); }
+  #hCov { color: var(--green); }
+  .stage { position: relative; }
+  canvas {
+    display: block;
+    border-radius: 14px;
+    border: 1px solid rgba(34,224,255,0.35);
+    box-shadow: 0 0 24px rgba(34,224,255,0.15), inset 0 0 40px rgba(168,85,247,0.08);
+    background: linear-gradient(180deg, #07071a 0%, #0b0b22 100%);
+    touch-action: none;
+  }
+  .controls {
+    width: min(94vw, 440px);
+    display: flex; gap: 8px; margin-top: 8px;
+  }
+  .controls button {
+    flex: 1; padding: 12px 0;
+    font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; font-weight: 700;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(13,13,36,0.9); color: var(--text);
+    touch-action: none;
+  }
+  .controls button:active { background: rgba(34,224,255,0.25); }
+  #btnNarrow { color: var(--pink); border-color: rgba(255,105,180,0.5); }
+  #btnWide { color: var(--green); border-color: rgba(127,255,176,0.5); }
+  .hint { font-size: 0.72rem; color: var(--muted); margin-top: 6px; text-align: center; line-height: 1.5; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(6,6,18,0.86);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .hidden { display: none !important; }
+  .panel { text-align: center; max-width: 360px; }
+  .panel h2 {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: 1.3rem; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple), var(--pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .panel h3 { font-size: 1.05rem; color: var(--yellow); margin-bottom: 10px; }
+  .panel p { font-size: 0.8rem; line-height: 1.65; color: #c8c8ee; margin-bottom: 8px; text-align: left; }
+  .panel p b { color: var(--yellow); }
+  .panel .legend { display: grid; grid-template-columns: 1fr; gap: 3px; margin: 8px 0 12px; text-align: left; font-size: 0.78rem; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .big-btn {
+    display: inline-block; margin-top: 6px;
+    padding: 11px 30px; border: none; border-radius: 30px;
+    font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 1rem;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    color: #050514; cursor: pointer;
+    box-shadow: 0 0 18px rgba(34,224,255,0.4);
+  }
+  .big-btn:active { transform: scale(0.97); }
+  table.rep { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 6px 0 10px; }
+  table.rep td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  table.rep td:first-child { color: var(--muted); text-align: left; }
+  table.rep td:last-child { text-align: right; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; }
+  .ok { color: var(--green); }
+  .bad { color: var(--red); }
+  .best { font-family: 'Orbitron', sans-serif; color: var(--gold); font-size: 0.85rem; margin-top: 6px; }
+  .lesson {
+    font-size: 0.76rem; line-height: 1.6; color: #b8b8e8;
+    background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 8px; padding: 8px 10px; text-align: left; margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="back" href="index.html">← 遊戲選單</a>
+    <h1>INTERVAL CATCHER</h1>
+  </div>
+  <div class="hud">
+    <div><small>分數</small><b id="hScore">0</b></div>
+    <div><small>波次</small><b id="hWave">1</b></div>
+    <div><small>信用</small><b id="hLives">♥♥♥</b></div>
+    <div><small>可漏接</small><b id="hCov">2</b></div>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <div class="overlay" id="startScreen">
+      <div class="panel">
+        <h2>INTERVAL CATCHER</h2>
+        <h3>沐茶：區間捕手</h3>
+        <p>沐茶新開了珍珠自動投料機，但機器很任性：珍珠落點服從一個<b>看不見的常態分配</b>。你的托盤就是一個<b>區間</b>——左右移動調整中心，縮放調整寬度。</p>
+        <p>托盤<b>越窄，每顆得分越高</b>（估計越精準）；但每波 20 顆裡漏接超過上限，就會失去一顆信用 ♥。這就是<b>精確度 vs. 信賴水準</b>的取捨！</p>
+        <div class="legend">
+          <div><span class="dot" style="background:#22e0ff;box-shadow:0 0 6px #22e0ff"></span>藍珍珠：一般樣本，計入涵蓋率</div>
+          <div><span class="dot" style="background:#ffc940;box-shadow:0 0 6px #ffc940"></span>金珍珠：肥尾事件，接到 ×5 分，漏了不扣</div>
+          <div><span class="dot" style="background:#ff5566;box-shadow:0 0 6px #ff5566"></span>紅雜訊（第 4 波起）：假訊號，接到會扣分、斷連擊</div>
+        </div>
+        <p style="font-size:0.74rem;color:var(--muted)">⌨️ ← → / A D 移動　↑ ↓ / W S 縮放寬度　P 暫停<br>📱 在畫面上拖曳移動，按住下方按鈕縮放</p>
+        <button class="big-btn" id="btnStart">▶ 開始接珍珠</button>
+        <div class="best" id="bestStart"></div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="waveScreen">
+      <div class="panel">
+        <h3 id="wTitle">第 1 波結算</h3>
+        <table class="rep" id="wTable"></table>
+        <div class="lesson" id="wLesson"></div>
+        <button class="big-btn" id="btnNext">下一波 ▶</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="pauseScreen">
+      <div class="panel">
+        <h3>暫停中</h3>
+        <button class="big-btn" id="btnResume">繼續</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overScreen">
+      <div class="panel">
+        <h2>GAME OVER</h2>
+        <h3 id="oTitle">信用用完了</h3>
+        <table class="rep" id="oTable"></table>
+        <div class="lesson" id="oLesson"></div>
+        <button class="big-btn" id="btnRetry">↻ 再玩一次</button>
+        <div class="best" id="bestOver"></div>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="btnNarrow">◀▶ 收窄</button>
+    <button id="btnWide">◀ ▶ 放寬</button>
+  </div>
+  <div class="hint">托盤越窄得分越高，但每波漏接太多會掉信用。觀察底部的落點直方圖來估計 μ 與 σ！</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- 常數 ----------
+  var W = 400, H = 640;
+  var CATCH_Y = 548;        // 托盤判定高度
+  var FLOOR_Y = 576;        // 落地高度
+  var HIST_TOP = 580, HIST_BOT = 632;
+  var MIN_HW = 14, MAX_HW = 150;
+  var PER_WAVE = 20;
+  var BINS = 25;
+  var BEST_KEY = 'intervalCatcherBest';
+
+  // ---------- DOM ----------
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var $ = function (id) { return document.getElementById(id); };
+  var startScreen = $('startScreen'), waveScreen = $('waveScreen'),
+      pauseScreen = $('pauseScreen'), overScreen = $('overScreen');
+
+  // ---------- 工具 ----------
+  function randn() {
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function clamp(x, a, b) { return x < a ? a : (x > b ? b : x); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function getBest() {
+    try { return parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) { return 0; }
+  }
+  function setBest(v) {
+    try { localStorage.setItem(BEST_KEY, String(v)); } catch (e) { /* ignore */ }
+  }
+
+  // ---------- 畫布縮放 ----------
+  var scale = 1;
+  function resize() {
+    var maxW = Math.min(window.innerWidth * 0.94, 440);
+    var maxH = window.innerHeight - 190;
+    var cssW = Math.min(maxW, maxH * W / H);
+    cssW = Math.max(cssW, 260);
+    var cssH = cssW * H / W;
+    var dpr = window.devicePixelRatio || 1;
+    cv.style.width = cssW + 'px';
+    cv.style.height = cssH + 'px';
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+    scale = cv.width / W;
+    $('stage').style.width = cssW + 'px';
+    $('stage').style.height = cssH + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- 狀態 ----------
+  var S = null;
+  var state = 'start'; // start | play | wave | pause | over
+  var keys = {};
+  var touchNarrow = false, touchWide = false;
+  var dragX = null;
+
+  function newGame() {
+    S = {
+      score: 0, wave: 0, lives: 3, combo: 0, maxCombo: 0,
+      totalCaught: 0, totalNormal: 0, widthSum: 0, widthCount: 0,
+      goldCaught: 0, redHit: 0, perfectWaves: 0,
+      cx: W / 2, hw: 80,
+      drops: [], particles: [], floaters: [],
+      stars: []
+    };
+    for (var i = 0; i < 40; i++) S.stars.push({ x: Math.random() * W, y: Math.random() * (CATCH_Y - 20), r: Math.random() * 1.2 + 0.3, t: Math.random() * 6 });
+    startWave();
+  }
+
+  function allowedMiss(wave) {
+    // 前兩波 80% 信賴，之後 90%
+    return wave <= 2 ? 4 : 2;
+  }
+
+  function startWave() {
+    S.wave++;
+    var w = S.wave;
+    S.mu = rand(90, 310);
+    S.sigma = clamp(rand(22, 60) - Math.min(w, 8) * 1.5, 16, 60);
+    S.shiftAt = (w >= 5 && Math.random() < 0.6) ? Math.floor(rand(8, 13)) : -1;
+    S.shifted = false;
+    S.shiftMsg = 0;
+    S.spawned = 0;        // 已生成的一般珍珠數
+    S.resolved = 0;       // 已判定的一般珍珠數
+    S.caught = 0;
+    S.missed = 0;
+    S.spawnT = 0.8;
+    S.interval = Math.max(0.42, 1.0 - w * 0.05);
+    S.speed = 150 + Math.min(w, 12) * 17;
+    S.hist = new Array(BINS).fill(0);
+    S.samples = [];
+    S.waveScore = 0;
+    S.waveWidthSum = 0; S.waveWidthN = 0;
+    S.muHistory = [S.mu];
+    S.drops = [];
+    S.allowed = allowedMiss(w);
+    S.bannerT = 1.6;
+    updateHUD();
+  }
+
+  function spawn() {
+    var w = S.wave;
+    var r = Math.random();
+    var type = 'normal';
+    if (S.spawned < PER_WAVE) {
+      if (r < 0.08) type = 'gold';
+      else if (w >= 4 && r < 0.08 + Math.min(0.06 + w * 0.01, 0.2)) type = 'red';
+    } else {
+      return;
+    }
+    var x;
+    if (type === 'normal') {
+      if (S.shiftAt >= 0 && !S.shifted && S.spawned >= S.shiftAt) {
+        S.shifted = true;
+        var dir = S.mu > W / 2 ? -1 : 1;
+        S.mu = clamp(S.mu + dir * rand(70, 130), 70, 330);
+        S.muHistory.push(S.mu);
+        S.shiftMsg = 2.0;
+      }
+      x = clamp(S.mu + randn() * S.sigma, 8, W - 8);
+      S.spawned++;
+    } else if (type === 'gold') {
+      var side = Math.random() < 0.5 ? -1 : 1;
+      x = clamp(S.mu + side * S.sigma * rand(2.6, 3.8), 8, W - 8);
+    } else {
+      x = rand(12, W - 12);
+    }
+    S.drops.push({ x: x, y: -10, type: type, vy: S.speed * (type === 'red' ? 1.15 : 1) * rand(0.92, 1.08), done: false, caught: false });
+  }
+
+  function addFloater(x, y, text, color) {
+    S.floaters.push({ x: x, y: y, text: text, color: color, t: 1.0 });
+  }
+  function burst(x, y, color, n) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, sp = rand(40, 160);
+      S.particles.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, t: rand(0.4, 0.8), c: color });
+    }
+  }
+
+  function comboMult() {
+    return Math.min(3, 1 + Math.floor(S.combo / 5) * 0.5);
+  }
+
+  function resolveDrop(d) {
+    var inside = Math.abs(d.x - S.cx) <= S.hw;
+    var base = Math.round(10 * MAX_HW / S.hw);
+    if (d.type === 'normal') {
+      S.resolved++;
+      S.totalNormal++;
+      if (inside) {
+        d.caught = true;
+        S.caught++; S.totalCaught++;
+        S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
+        var pts = Math.round(base * comboMult());
+        S.score += pts; S.waveScore += pts;
+        addFloater(d.x, CATCH_Y - 14, '+' + pts, '#22e0ff');
+        burst(d.x, CATCH_Y, '#22e0ff', 8);
+      } else {
+        S.missed++;
+        S.combo = 0;
+        addFloater(d.x, CATCH_Y - 14, '漏接', '#ff5566');
+      }
+    } else if (d.type === 'gold') {
+      if (inside) {
+        d.caught = true;
+        var gp = Math.round(base * 5 * comboMult());
+        S.score += gp; S.waveScore += gp; S.goldCaught++;
+        addFloater(d.x, CATCH_Y - 14, '肥尾 +' + gp, '#ffc940');
+        burst(d.x, CATCH_Y, '#ffc940', 18);
+      }
+    } else if (d.type === 'red') {
+      if (inside) {
+        d.caught = true;
+        var lp = 30 + S.wave * 5;
+        S.score = Math.max(0, S.score - lp); S.waveScore -= lp; S.redHit++;
+        S.combo = 0;
+        addFloater(d.x, CATCH_Y - 14, '假訊號 -' + lp, '#ff5566');
+        burst(d.x, CATCH_Y, '#ff5566', 12);
+        S.shake = 0.25;
+      }
+    }
+    updateHUD();
+  }
+
+  function landDrop(d) {
+    if (d.type === 'normal') {
+      var b = clamp(Math.floor(d.x / W * BINS), 0, BINS - 1);
+      S.hist[b]++;
+      S.samples.push(d.x);
+    }
+  }
+
+  function endWave() {
+    var n = S.samples.length;
+    var mean = 0, sd = 0;
+    for (var i = 0; i < n; i++) mean += S.samples[i];
+    mean = n ? mean / n : 0;
+    for (var j = 0; j < n; j++) sd += (S.samples[j] - mean) * (S.samples[j] - mean);
+    sd = n > 1 ? Math.sqrt(sd / (n - 1)) : 0;
+    var passed = S.missed <= S.allowed;
+    var perfect = S.missed === 0;
+    var bonus = 0;
+    if (perfect) { bonus = 100 + S.wave * 20; S.perfectWaves++; }
+    S.score += bonus;
+    var avgW = S.waveWidthN ? (S.waveWidthSum / S.waveWidthN) * 2 : S.hw * 2;
+    if (!passed) S.lives--;
+    updateHUD();
+
+    var cov = Math.round(S.caught / PER_WAVE * 100);
+    var need = Math.round((PER_WAVE - S.allowed) / PER_WAVE * 100);
+    var rows = [
+      ['涵蓋率（接到 / 20）', '<span class="' + (passed ? 'ok' : 'bad') + '">' + S.caught + ' / 20 = ' + cov + '%</span>'],
+      ['要求信賴水準', '≥ ' + need + '%'],
+      ['樣本平均 x̄', mean.toFixed(1)],
+      ['樣本標準差 s', sd.toFixed(1)],
+      ['真實 μ（本波）', S.muHistory.map(function (m) { return m.toFixed(0); }).join(' → ')],
+      ['真實 σ', S.sigma.toFixed(1)],
+      ['你的平均托盤寬', avgW.toFixed(0) + '（≈ ' + (avgW / (2 * S.sigma)).toFixed(2) + 'σ 半寬）'],
+      ['本波得分', (S.waveScore + bonus) + (perfect ? '（含全接獎勵 +' + bonus + '）' : '')]
+    ];
+    $('wTable').innerHTML = rows.map(function (r) { return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'; }).join('');
+    $('wTitle').textContent = '第 ' + S.wave + ' 波結算 ' + (perfect ? '✨ 全數涵蓋！' : (passed ? '✅ 過關' : '💔 信用 -1'));
+
+    var z = avgW / (2 * S.sigma);
+    var tips = [];
+    if (S.shiftAt >= 0) tips.push('本波發生了<b>體制轉換</b>：μ 中途跳動！舊樣本估出的區間會失準——真實世界的歷史資料也可能突然不再代表未來。');
+    if (z < 1.0) tips.push('你的托盤半寬不到 1σ，理論上只能涵蓋約 68% 的樣本——得分高但很冒險。');
+    else if (z < 1.7) tips.push('托盤半寬約 ' + z.toFixed(2) + 'σ，常態下大約能涵蓋 ' + Math.round(normCover(z) * 100) + '% 的樣本。要 90% 涵蓋，半寬約需 1.645σ。');
+    else tips.push('托盤半寬約 ' + z.toFixed(2) + 'σ，涵蓋率約 ' + Math.round(normCover(z) * 100) + '%，很安全但每顆分數較低。試著用 x̄ 與 s 把區間收窄到剛好 1.645σ～1.96σ。');
+    if (S.wave === 3) tips.push('下一波起會出現紅色<b>假訊號</b>，它們均勻亂落、跟分配無關，別被騙了。');
+    $('wLesson').innerHTML = tips.join('<br>');
+
+    if (S.lives <= 0) {
+      gameOver();
+    } else {
+      state = 'wave';
+      waveScreen.classList.remove('hidden');
+    }
+  }
+
+  function normCover(z) {
+    // P(|Z| <= z)，以 erf 近似
+    var t = z / Math.SQRT2;
+    var a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    var k = 1 / (1 + p * t);
+    var y = 1 - (((((a5 * k + a4) * k) + a3) * k + a2) * k + a1) * k * Math.exp(-t * t);
+    return y;
+  }
+
+  function gameOver() {
+    state = 'over';
+    var best = getBest();
+    var isNew = S.score > best;
+    if (isNew) setBest(S.score);
+    var cov = S.totalNormal ? Math.round(S.totalCaught / S.totalNormal * 100) : 0;
+    var avgW = S.widthCount ? (S.widthSum / S.widthCount) * 2 : 0;
+    var rows = [
+      ['最終分數', '<span style="color:var(--yellow)">' + S.score + '</span>'],
+      ['撐到第幾波', S.wave],
+      ['總涵蓋率', S.totalCaught + ' / ' + S.totalNormal + ' = ' + cov + '%'],
+      ['全數涵蓋波次', S.perfectWaves],
+      ['平均托盤寬', avgW.toFixed(0)],
+      ['最高連擊', S.maxCombo],
+      ['接到肥尾金珍珠', S.goldCaught],
+      ['誤接假訊號', S.redHit]
+    ];
+    $('oTable').innerHTML = rows.map(function (r) { return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>'; }).join('');
+    $('oTitle').textContent = isNew ? '🏆 新紀錄！' : '信用用完了';
+    $('oLesson').innerHTML = '信賴區間的核心取捨：<b>區間越窄越精確，但涵蓋真值的機率越低</b>。' +
+      '在常態分配下，想涵蓋 90% 的樣本，區間約為 μ ± 1.645σ；95% 則是 μ ± 1.96σ。σ 越大，同樣信賴水準需要的區間就越寬。';
+    var b = Math.max(best, S.score);
+    $('bestOver').textContent = 'BEST ' + b;
+    overScreen.classList.remove('hidden');
+  }
+
+  function updateHUD() {
+    if (!S) return;
+    $('hScore').textContent = S.score;
+    $('hWave').textContent = S.wave;
+    var h = '';
+    for (var i = 0; i < 3; i++) h += i < S.lives ? '♥' : '♡';
+    $('hLives').textContent = h;
+    var left = S.allowed - S.missed;
+    $('hCov').textContent = left >= 0 ? left : '✕';
+    $('hCov').style.color = left > 0 ? 'var(--green)' : (left === 0 ? 'var(--yellow)' : 'var(--red)');
+  }
+
+  // ---------- 更新 ----------
+  function update(dt) {
+    var mv = 0, wz = 0;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) mv -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) mv += 1;
+    if (keys['ArrowUp'] || keys['w'] || keys['W'] || touchWide) wz += 1;
+    if (keys['ArrowDown'] || keys['s'] || keys['S'] || touchNarrow) wz -= 1;
+    S.cx += mv * 330 * dt;
+    if (dragX !== null) {
+      var diff = dragX - S.cx;
+      S.cx += clamp(diff, -900 * dt, 900 * dt);
+    }
+    S.hw = clamp(S.hw + wz * 110 * dt, MIN_HW, MAX_HW);
+    S.cx = clamp(S.cx, S.hw * 0.3, W - S.hw * 0.3);
+    S.widthSum += S.hw * dt; S.widthCount += dt;
+    S.waveWidthSum += S.hw * dt; S.waveWidthN += dt;
+
+    if (S.bannerT > 0) S.bannerT -= dt;
+    if (S.shiftMsg > 0) S.shiftMsg -= dt;
+    if (S.shake > 0) S.shake -= dt;
+
+    S.spawnT -= dt;
+    if (S.spawnT <= 0 && S.spawned < PER_WAVE) {
+      spawn();
+      S.spawnT = S.interval * rand(0.7, 1.3);
+    }
+
+    for (var i = 0; i < S.drops.length; i++) {
+      var d = S.drops[i];
+      var prevY = d.y;
+      d.y += d.vy * dt;
+      if (!d.done && prevY < CATCH_Y && d.y >= CATCH_Y) {
+        d.done = true;
+        resolveDrop(d);
+        if (d.caught) { landDrop(d); d.remove = true; }
+      }
+      if (d.done && !d.caught && d.y >= FLOOR_Y) {
+        landDrop(d);
+        d.remove = true;
+      }
+    }
+    S.drops = S.drops.filter(function (d) { return !d.remove; });
+
+    for (var p = 0; p < S.particles.length; p++) {
+      var pt = S.particles[p];
+      pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.vy += 300 * dt; pt.t -= dt;
+    }
+    S.particles = S.particles.filter(function (q) { return q.t > 0; });
+    for (var f = 0; f < S.floaters.length; f++) { S.floaters[f].y -= 40 * dt; S.floaters[f].t -= dt; }
+    S.floaters = S.floaters.filter(function (q) { return q.t > 0; });
+    for (var s = 0; s < S.stars.length; s++) S.stars[s].t += dt;
+
+    if (S.resolved >= PER_WAVE && S.spawned >= PER_WAVE && S.drops.every(function (d) { return d.type !== 'normal'; })) {
+      S.drops = [];
+      endWave();
+    }
+  }
+
+  // ---------- 繪圖 ----------
+  function draw() {
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!S) { drawIdle(); return; }
+    var sx = 0, sy = 0;
+    if (S.shake > 0) { sx = rand(-4, 4); sy = rand(-4, 4); }
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // 星空
+    for (var i = 0; i < S.stars.length; i++) {
+      var st = S.stars[i];
+      ctx.globalAlpha = 0.3 + 0.3 * Math.sin(st.t * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 投料機
+    var grad = ctx.createLinearGradient(0, 0, 0, 26);
+    grad.addColorStop(0, 'rgba(168,85,247,0.5)'); grad.addColorStop(1, 'rgba(168,85,247,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, 26);
+    ctx.fillStyle = '#a855f7';
+    ctx.font = '600 10px Orbitron, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MU TEA · PEARL DISPENSER', W / 2, 14);
+
+    // 網格線
+    ctx.strokeStyle = 'rgba(34,224,255,0.06)';
+    ctx.lineWidth = 1;
+    for (var gx = 0; gx <= W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 26); ctx.lineTo(gx, FLOOR_Y); ctx.stroke(); }
+
+    // 托盤區間帶
+    var L = S.cx - S.hw, R = S.cx + S.hw;
+    var band = ctx.createLinearGradient(0, 60, 0, CATCH_Y);
+    band.addColorStop(0, 'rgba(34,224,255,0)'); band.addColorStop(1, 'rgba(34,224,255,0.10)');
+    ctx.fillStyle = band;
+    ctx.fillRect(L, 60, R - L, CATCH_Y - 60);
+
+    // 珍珠
+    for (var k = 0; k < S.drops.length; k++) {
+      var d = S.drops[k];
+      var col = d.type === 'gold' ? '#ffc940' : (d.type === 'red' ? '#ff5566' : '#22e0ff');
+      ctx.shadowColor = col; ctx.shadowBlur = 12;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = d.done ? 0.45 : 1;
+      if (d.type === 'red') {
+        ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(Math.PI / 4);
+        ctx.fillRect(-6, -6, 12, 12); ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.type === 'gold' ? 8 : 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.arc(d.x - 2, d.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+
+    // 托盤
+    ctx.shadowColor = '#22e0ff'; ctx.shadowBlur = 16;
+    ctx.strokeStyle = '#22e0ff'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(L, CATCH_Y - 14); ctx.lineTo(L, CATCH_Y + 4); ctx.lineTo(R, CATCH_Y + 4); ctx.lineTo(R, CATCH_Y - 14);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(34,224,255,0.15)';
+    ctx.fillRect(L, CATCH_Y - 14, R - L, 18);
+    // 中心
+    ctx.fillStyle = '#ff69b4';
+    ctx.beginPath(); ctx.moveTo(S.cx, CATCH_Y + 6); ctx.lineTo(S.cx - 5, CATCH_Y + 14); ctx.lineTo(S.cx + 5, CATCH_Y + 14); ctx.closePath(); ctx.fill();
+    // 每顆得分
+    ctx.fillStyle = '#ffe44d';
+    ctx.font = '600 10px Orbitron, sans-serif';
+    ctx.textAlign = 'center';
+    var base = Math.round(10 * MAX_HW / S.hw);
+    ctx.fillText(base + ' PTS' + (comboMult() > 1 ? ' ×' + comboMult() : ''), S.cx, CATCH_Y - 20);
+
+    // 地板線
+    ctx.strokeStyle = 'rgba(168,85,247,0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(W, FLOOR_Y); ctx.stroke();
+
+    // 直方圖
+    var maxH = 1;
+    for (var b = 0; b < BINS; b++) maxH = Math.max(maxH, S.hist[b]);
+    var bw = W / BINS;
+    for (var b2 = 0; b2 < BINS; b2++) {
+      if (!S.hist[b2]) continue;
+      var hh = S.hist[b2] / Math.max(maxH, 4) * (HIST_BOT - HIST_TOP);
+      ctx.fillStyle = 'rgba(127,255,176,0.55)';
+      ctx.fillRect(b2 * bw + 1, HIST_BOT - hh, bw - 2, hh);
+    }
+    // 樣本平均
+    if (S.samples.length >= 2) {
+      var m = 0;
+      for (var q = 0; q < S.samples.length; q++) m += S.samples[q];
+      m /= S.samples.length;
+      ctx.strokeStyle = '#ffe44d'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(m, HIST_TOP - 2); ctx.lineTo(m, HIST_BOT); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffe44d'; ctx.font = '500 10px "Noto Sans TC", sans-serif';
+      ctx.fillText('x̄', m, HIST_TOP - 5);
+    }
+    ctx.fillStyle = 'rgba(136,136,187,0.9)'; ctx.font = '500 9px "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('本波落點直方圖 n=' + S.samples.length, 4, H - 2);
+    ctx.textAlign = 'right';
+    ctx.fillText('剩 ' + (PER_WAVE - S.resolved) + ' 顆', W - 4, H - 2);
+
+    // 粒子與浮字
+    for (var p = 0; p < S.particles.length; p++) {
+      var pt = S.particles[p];
+      ctx.globalAlpha = clamp(pt.t / 0.6, 0, 1);
+      ctx.fillStyle = pt.c;
+      ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    for (var f = 0; f < S.floaters.length; f++) {
+      var fl = S.floaters[f];
+      ctx.globalAlpha = clamp(fl.t, 0, 1);
+      ctx.fillStyle = fl.color;
+      ctx.font = '700 13px "Noto Sans TC", sans-serif';
+      ctx.fillText(fl.text, fl.x, fl.y);
+    }
+    ctx.globalAlpha = 1;
+
+    // 連擊
+    if (S.combo >= 3) {
+      ctx.fillStyle = '#ff69b4';
+      ctx.font = '900 14px Orbitron, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(S.combo + ' COMBO', W - 10, 46);
+    }
+
+    // 波次橫幅
+    if (S.bannerT > 0) {
+      ctx.globalAlpha = clamp(S.bannerT, 0, 1);
+      ctx.fillStyle = '#a855f7';
+      ctx.font = '900 26px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('WAVE ' + S.wave, W / 2, 230);
+      ctx.fillStyle = '#e8e8ff';
+      ctx.font = '500 13px "Noto Sans TC", sans-serif';
+      ctx.fillText('20 顆裡最多漏接 ' + S.allowed + ' 顆（信賴水準 ' + Math.round((PER_WAVE - S.allowed) / PER_WAVE * 100) + '%）', W / 2, 256);
+      ctx.globalAlpha = 1;
+    }
+    if (S.shiftMsg > 0) {
+      ctx.globalAlpha = clamp(S.shiftMsg, 0, 1);
+      ctx.fillStyle = '#ff5566';
+      ctx.font = '700 17px "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠ 體制轉換！μ 移動了', W / 2, 200);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  function drawIdle() {
+    var t = performance.now() / 1000;
+    ctx.fillStyle = 'rgba(34,224,255,0.08)';
+    ctx.fillRect(0, 0, W, H);
+    // 示意常態曲線
+    ctx.strokeStyle = 'rgba(127,255,176,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var x = 0; x <= W; x += 4) {
+      var z = (x - W / 2) / 55;
+      var y = HIST_BOT - Math.exp(-z * z / 2) * 90;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    for (var i = 0; i < 6; i++) {
+      var px = W / 2 + Math.sin(t * 0.7 + i * 1.7) * 90;
+      var py = ((t * 120 + i * 110) % (H - 40));
+      ctx.fillStyle = '#22e0ff';
+      ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ---------- 主迴圈 ----------
+  var last = performance.now();
+  function loop(now) {
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (state === 'play') update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- 控制 ----------
+  function begin() {
+    newGame();
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+    waveScreen.classList.add('hidden');
+    state = 'play';
+  }
+  function nextWave() {
+    if (state !== 'wave') return;
+    waveScreen.classList.add('hidden');
+    startWave();
+    state = 'play';
+  }
+  function togglePause() {
+    if (state === 'play') { state = 'pause'; pauseScreen.classList.remove('hidden'); }
+    else if (state === 'pause') { state = 'play'; pauseScreen.classList.add('hidden'); last = performance.now(); }
+  }
+
+  $('btnStart').addEventListener('click', begin);
+  $('btnRetry').addEventListener('click', begin);
+  $('btnNext').addEventListener('click', nextWave);
+  $('btnResume').addEventListener('click', togglePause);
+
+  window.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].indexOf(k) >= 0) e.preventDefault();
+    if (k === 'Enter' || k === ' ') {
+      if (state === 'start' || state === 'over') { begin(); return; }
+      if (state === 'wave') { nextWave(); return; }
+    }
+    if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
+    if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].indexOf(k) >= 0) dragX = null;
+    keys[k] = true;
+  });
+  window.addEventListener('keyup', function (e) { keys[e.key] = false; });
+  window.addEventListener('blur', function () { keys = {}; touchNarrow = touchWide = false; dragX = null; if (state === 'play') togglePause(); });
+
+  function canvasX(clientX) {
+    var r = cv.getBoundingClientRect();
+    return (clientX - r.left) / r.width * W;
+  }
+  cv.addEventListener('pointerdown', function (e) {
+    if (state !== 'play') return;
+    dragX = canvasX(e.clientX);
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    e.preventDefault();
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (dragX !== null || e.pointerType === 'mouse') {
+      if (state === 'play' && (dragX !== null || e.buttons === 0)) dragX = canvasX(e.clientX);
+    }
+  });
+  function endDrag() { dragX = null; }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') dragX = null; });
+
+  function holdBtn(el, on, off) {
+    el.addEventListener('pointerdown', function (e) { e.preventDefault(); on(); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { el.addEventListener(ev, off); });
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  holdBtn($('btnNarrow'), function () { touchNarrow = true; }, function () { touchNarrow = false; });
+  holdBtn($('btnWide'), function () { touchWide = true; }, function () { touchWide = false; });
+
+  var b0 = getBest();
+  $('bestStart').textContent = b0 ? 'BEST ' + b0 : '';
+})();
+</script>
+</body>
+</html>
