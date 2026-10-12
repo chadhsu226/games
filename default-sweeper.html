@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>違約掃雷 DEFAULT SWEEPER | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060612; --bg2:#0d0d24; --pink:#ff69b4; --yellow:#ffe44d; --green:#7fffb0;
+    --purple:#a855f7; --cyan:#22e0ff; --gold:#ffc940; --red:#ff5566; --text:#e8e8ff; --muted:#8888bb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  .wrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; padding:8px 8px 16px; user-select:none; -webkit-user-select:none; }
+  .topbar { width:min(94vw,460px); display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.85rem; }
+  .back:hover { color:var(--pink); }
+  h1 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1rem,4.2vw,1.35rem); letter-spacing:.1em;
+    background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; text-align:center; }
+  .panel { width:min(94vw,460px); display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .stat { background:rgba(13,13,36,.85); border:1px solid rgba(168,85,247,.35); border-radius:10px; padding:5px 4px; text-align:center; }
+  .stat .l { font-size:.62rem; color:var(--muted); }
+  .stat .v { font-family:'Orbitron',sans-serif; font-weight:600; font-size:1rem; color:var(--green); }
+  .stat.p .v { color:var(--yellow); }
+  .stat.t .v { color:var(--cyan); }
+  .stat.i .v { color:var(--pink); }
+  .board-wrap { position:relative; border-radius:14px; border:1px solid rgba(168,85,247,.45); box-shadow:0 0 28px rgba(168,85,247,.25),0 0 60px rgba(255,105,180,.1); background:#070718; padding:6px; }
+  #board { display:grid; gap:2px; touch-action:manipulation; }
+  .c { width:var(--cs); height:var(--cs); display:flex; align-items:center; justify-content:center; border-radius:5px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:calc(var(--cs)*.5); cursor:pointer;
+    background:linear-gradient(145deg,#1b1b44,#12122e); border:1px solid rgba(168,85,247,.3); color:var(--text); }
+  .c:hover { border-color:var(--pink); }
+  .c.open { background:#0a0a1c; border-color:rgba(255,255,255,.06); cursor:default; }
+  .c.cur { outline:2px solid var(--yellow); outline-offset:-2px; }
+  .c.flag { color:var(--gold); }
+  .c.boom { background:rgba(255,85,102,.35); border-color:var(--red); }
+  .c.wrong { background:rgba(255,228,77,.15); }
+  .c.n1{color:#22e0ff}.c.n2{color:#7fffb0}.c.n3{color:#ff5566}.c.n4{color:#a855f7}.c.n5{color:#ffc940}.c.n6{color:#ff69b4}.c.n7{color:#fff}.c.n8{color:#888}
+  .controls { width:min(94vw,460px); display:flex; gap:8px; margin-top:8px; }
+  .btn { flex:1; background:rgba(13,13,36,.9); border:1px solid rgba(168,85,247,.5); color:var(--text); border-radius:10px; padding:9px 4px; font-family:inherit; font-size:.85rem; cursor:pointer; }
+  .btn.on { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; font-weight:700; border-color:transparent; }
+  .msg { width:min(94vw,460px); min-height:2.6em; margin-top:8px; font-size:.78rem; color:var(--muted); text-align:center; line-height:1.5; }
+  .overlay { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:18px 20px; text-align:center; background:rgba(6,6,18,.9); border-radius:14px; }
+  .overlay.hide { display:none; }
+  .overlay h2 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.5rem; background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .overlay p { font-size:.85rem; color:var(--text); line-height:1.65; max-width:340px; }
+  .overlay .sub { color:var(--muted); font-size:.75rem; }
+  .diffs { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .go { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border:none; border-radius:24px; padding:10px 22px; font-family:'Noto Sans TC'; font-weight:700; font-size:.95rem; cursor:pointer; box-shadow:0 0 18px rgba(255,105,180,.4); }
+  .go.alt { background:rgba(13,13,36,.9); color:var(--text); border:1px solid rgba(168,85,247,.6); box-shadow:none; }
+  .go.sel { outline:2px solid var(--green); }
+  .res { font-family:'Orbitron',sans-serif; font-size:.82rem; color:var(--cyan); line-height:1.9; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="index.html">← 返回遊戲選單</a><span class="sub" style="font-size:.75rem;color:var(--muted)">日光咖啡 · 放款組合</span></div>
+  <h1>違約掃雷 DEFAULT SWEEPER</h1>
+  <div class="panel">
+    <div class="stat"><div class="l">未標違約數</div><div class="v" id="sMines">0</div></div>
+    <div class="stat p"><div class="l">隨機一格違約率</div><div class="v" id="sP">0%</div></div>
+    <div class="stat t"><div class="l">時間(秒)</div><div class="v" id="sTime">0</div></div>
+    <div class="stat i"><div class="l">信用保險</div><div class="v" id="sIns">1</div></div>
+  </div>
+  <div class="board-wrap">
+    <div id="board"></div>
+    <div class="overlay" id="ovStart">
+      <h2>違約掃雷</h2>
+      <p>日光咖啡把一批貸款分給了許多小店家，其中混著幾戶<b style="color:var(--red)">違約戶</b>。數字代表「周圍 8 格中有幾戶違約」，用推理找出所有違約戶並翻開全部安全帳戶！</p>
+      <p class="sub">電腦：滑鼠左鍵翻開、右鍵標記；方向鍵移動、空白鍵翻開、F 標記。<br>手機：用下方「翻開／標記」切換，或長按標記。<br>每局有 1 次「信用保險」：踩到違約戶時自動賠付，加罰 15 秒。</p>
+      <div class="diffs" id="diffsStart"></div>
+      <div class="sub" id="bestStart"></div>
+    </div>
+    <div class="overlay hide" id="ovEnd">
+      <h2 id="endTitle">結算</h2>
+      <div class="res" id="endRes"></div>
+      <p id="endNote"></p>
+      <div class="diffs"><button class="go" id="again">再來一局</button><button class="go alt" id="menu">換難度</button></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn on" id="mReveal">⛏ 翻開</button>
+    <button class="btn" id="mFlag">🚩 標記違約</button>
+    <button class="btn" id="mNew">↻ 重開</button>
+  </div>
+  <div class="msg" id="msg">提示：「隨機一格違約率」＝尚未找到的違約戶 ÷ 尚未翻開的格數，沒有線索時只能靠機率下注。</div>
+</div>
+
+<script>
+(function(){
+  var DIFFS = {
+    easy:   {name:'簡單 9×9',   w:9,  h:9,  m:10},
+    normal: {name:'中等 12×12', w:12, h:12, m:24},
+    hard:   {name:'困難 14×14', w:14, h:14, m:40}
+  };
+  var PENALTY = 15;
+  var $ = function(id){ return document.getElementById(id); };
+  var boardEl = $('board');
+  var diffKey = 'easy', W, H, M, cells, state = 'idle', first = true, flagMode = false;
+  var cur = {x:0,y:0}, insurance = 1, penalty = 0, t0 = 0, timer = null, longTimer = null, longFired = false;
+
+  function bestKey(k){ return 'defaultSweeper_best_' + k; }
+  function getBest(k){ try { var v = localStorage.getItem(bestKey(k)); return v ? parseFloat(v) : null; } catch(e){ return null; } }
+  function setBest(k, v){ try { localStorage.setItem(bestKey(k), String(v)); } catch(e){} }
+
+  function buildMenu(container){
+    container.innerHTML = '';
+    Object.keys(DIFFS).forEach(function(k){
+      var b = document.createElement('button');
+      b.className = 'go' + (k === diffKey ? ' sel' : '');
+      b.textContent = DIFFS[k].name;
+      b.onclick = function(){ diffKey = k; startGame(); };
+      container.appendChild(b);
+    });
+  }
+  function showBest(){
+    var parts = Object.keys(DIFFS).map(function(k){
+      var b = getBest(k);
+      return DIFFS[k].name + '：' + (b === null ? '--' : b.toFixed(1) + ' 秒');
+    });
+    $('bestStart').innerHTML = '最佳紀錄　' + parts.join('　');
+  }
+
+  function idx(x,y){ return y*W + x; }
+  function inb(x,y){ return x>=0 && y>=0 && x<W && y<H; }
+  function neighbors(x,y){
+    var r = [];
+    for (var dy=-1; dy<=1; dy++) for (var dx=-1; dx<=1; dx++){
+      if (!dx && !dy) continue;
+      if (inb(x+dx,y+dy)) r.push([x+dx,y+dy]);
+    }
+    return r;
+  }
+
+  function startGame(){
+    var d = DIFFS[diffKey];
+    W = d.w; H = d.h; M = d.m;
+    cells = [];
+    for (var i=0;i<W*H;i++) cells.push({mine:false,open:false,flag:false,n:0,el:null});
+    state = 'play'; first = true; insurance = 1; penalty = 0; cur = {x:Math.floor(W/2), y:Math.floor(H/2)};
+    clearInterval(timer); t0 = 0;
+    $('ovStart').classList.add('hide'); $('ovEnd').classList.add('hide');
+    layout(); render(); updatePanel();
+    $('msg').textContent = '第一格一定安全。找出 ' + M + ' 戶違約戶！';
+  }
+
+  function layout(){
+    var avail = Math.min(window.innerWidth*0.94, 460) - 12 - (W-1)*2;
+    var cs = Math.floor(avail / W);
+    if (cs > 42) cs = 42;
+    boardEl.style.setProperty('--cs', cs + 'px');
+    boardEl.style.gridTemplateColumns = 'repeat(' + W + ', ' + cs + 'px)';
+    boardEl.innerHTML = '';
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++){
+      var el = document.createElement('div');
+      el.className = 'c';
+      el.dataset.x = x; el.dataset.y = y;
+      cells[idx(x,y)].el = el;
+      boardEl.appendChild(el);
+    }
+  }
+
+  function placeMines(sx, sy){
+    var safe = {};
+    safe[idx(sx,sy)] = 1;
+    neighbors(sx,sy).forEach(function(p){ safe[idx(p[0],p[1])] = 1; });
+    var pool = [];
+    for (var i=0;i<W*H;i++) if (!safe[i]) pool.push(i);
+    if (pool.length < M){ pool = []; for (var j=0;j<W*H;j++) if (j !== idx(sx,sy)) pool.push(j); }
+    for (var k=pool.length-1;k>0;k--){ var r = Math.floor(Math.random()*(k+1)); var t = pool[k]; pool[k] = pool[r]; pool[r] = t; }
+    for (var m=0;m<M;m++) cells[pool[m]].mine = true;
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++){
+      var c = 0;
+      neighbors(x,y).forEach(function(p){ if (cells[idx(p[0],p[1])].mine) c++; });
+      cells[idx(x,y)].n = c;
+    }
+  }
+
+  function elapsed(){ return t0 ? (Date.now() - t0)/1000 + penalty : penalty; }
+
+  function reveal(x,y){
+    if (state !== 'play') return;
+    var c = cells[idx(x,y)];
+    if (c.open || c.flag) return;
+    if (first){
+      first = false; placeMines(x,y);
+      t0 = Date.now();
+      timer = setInterval(updatePanel, 200);
+    }
+    if (c.mine){
+      if (insurance > 0){
+        insurance--; penalty += PENALTY;
+        c.open = true; c.flag = true; c.insured = true;
+        $('msg').textContent = '信用保險賠付！這戶違約已自動標記，加罰 ' + PENALTY + ' 秒。';
+        render(); updatePanel(); checkWin(); return;
+      }
+      c.boom = true; c.open = true;
+      return endGame(false);
+    }
+    var stack = [[x,y]];
+    while (stack.length){
+      var p = stack.pop(), q = cells[idx(p[0],p[1])];
+      if (q.open || q.flag) continue;
+      q.open = true;
+      if (q.n === 0) neighbors(p[0],p[1]).forEach(function(n){ var cc = cells[idx(n[0],n[1])]; if (!cc.open && !cc.flag && !cc.mine) stack.push(n); });
+    }
+    render(); updatePanel(); checkWin();
+  }
+
+  function toggleFlag(x,y){
+    if (state !== 'play') return;
+    var c = cells[idx(x,y)];
+    if (c.open) return;
+    c.flag = !c.flag;
+    render(); updatePanel();
+  }
+
+  function chord(x,y){
+    if (state !== 'play') return;
+    var c = cells[idx(x,y)];
+    if (!c.open || c.n === 0 || c.mine) return;
+    var ns = neighbors(x,y), f = 0;
+    ns.forEach(function(p){ if (cells[idx(p[0],p[1])].flag) f++; });
+    if (f !== c.n) return;
+    ns.forEach(function(p){ if (state === 'play') reveal(p[0],p[1]); });
+  }
+
+  function act(x,y){
+    var c = cells[idx(x,y)];
+    if (c.open){ chord(x,y); return; }
+    if (flagMode) toggleFlag(x,y); else reveal(x,y);
+  }
+
+  function counts(){
+    var flags = 0, hidden = 0;
+    cells.forEach(function(c){ if (!c.open){ hidden++; if (c.flag) flags++; } else if (c.insured){ flags++; } });
+    return {flags:flags, hidden:hidden};
+  }
+
+  function updatePanel(){
+    var k = counts();
+    var unknownMines = Math.max(0, M - k.flags);
+    var unknownCells = 0;
+    cells.forEach(function(c){ if (!c.open && !c.flag) unknownCells++; });
+    $('sMines').textContent = M - k.flags;
+    var p = 0;
+    if (first) p = M / (W*H) * 100;
+    else if (unknownCells > 0) p = Math.min(100, unknownMines / unknownCells * 100);
+    $('sP').textContent = p.toFixed(0) + '%';
+    $('sTime').textContent = Math.floor(elapsed());
+    $('sIns').textContent = insurance;
+  }
+
+  function checkWin(){
+    if (state !== 'play') return;
+    var ok = true;
+    cells.forEach(function(c){ if (!c.mine && !c.open) ok = false; });
+    if (ok) endGame(true);
+  }
+
+  function endGame(win){
+    state = 'over'; clearInterval(timer);
+    var t = elapsed();
+    cells.forEach(function(c){
+      if (win && c.mine && !c.flag) c.flag = true;
+      if (!win && c.flag && !c.mine) c.wrong = true;
+    });
+    render(); updatePanel();
+    var k = counts();
+    var res = '難度：' + DIFFS[diffKey].name + '<br>用時：' + t.toFixed(1) + ' 秒（含罰時 ' + penalty + ' 秒）';
+    var best = getBest(diffKey), note;
+    if (win){
+      if (best === null || t < best){ setBest(diffKey, t); res += '<br><span style="color:#ffe44d">★ 新最佳紀錄！</span>'; }
+      else res += '<br>最佳紀錄：' + best.toFixed(1) + ' 秒';
+      $('endTitle').textContent = '全部掃清！';
+      note = '你成功辨識所有違約戶，組合風險全數出清。每一次「有線索才下手」都是用條件機率降低壞帳。';
+    } else {
+      $('endTitle').textContent = '壞帳爆發';
+      note = '踩到違約戶了。沒有線索的格子只能靠機率：違約率越高，盲點的期望損失越大——先從數字推理出的安全格下手。';
+    }
+    $('endRes').innerHTML = res;
+    $('endNote').textContent = note;
+    setTimeout(function(){ $('ovEnd').classList.remove('hide'); }, win ? 300 : 1000);
+  }
+
+  function render(){
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++){
+      var c = cells[idx(x,y)], el = c.el, cls = 'c', txt = '';
+      if (c.open && !c.mine){
+        cls += ' open'; if (c.n > 0){ cls += ' n' + c.n; txt = c.n; }
+      } else if (c.open && c.mine){
+        cls += ' open' + (c.boom ? ' boom' : ' flag'); txt = c.boom ? '💥' : '🏦';
+      } else if (c.flag){
+        cls += ' flag' + (c.wrong ? ' wrong' : ''); txt = '🚩';
+      } else if (state === 'over' && c.mine){
+        cls += ' open'; txt = '🏦';
+      }
+      if (state === 'play' && cur.x === x && cur.y === y) cls += ' cur';
+      if (el.className !== cls) el.className = cls;
+      if (el.textContent !== String(txt)) el.textContent = txt;
+    }
+  }
+
+  function cellFromEvent(e){
+    var t = e.target;
+    while (t && t !== boardEl && !(t.dataset && t.dataset.x !== undefined)) t = t.parentNode;
+    if (!t || t === boardEl) return null;
+    return {x: +t.dataset.x, y: +t.dataset.y};
+  }
+
+  boardEl.addEventListener('contextmenu', function(e){ e.preventDefault(); var p = cellFromEvent(e); if (p){ cur = p; toggleFlag(p.x,p.y); } });
+  boardEl.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var p = cellFromEvent(e); if (!p) return;
+    longFired = false;
+    if (e.pointerType !== 'mouse'){
+      clearTimeout(longTimer);
+      longTimer = setTimeout(function(){ longFired = true; cur = p; toggleFlag(p.x,p.y); if (navigator.vibrate) navigator.vibrate(30); }, 420);
+    }
+  });
+  boardEl.addEventListener('pointerup', function(e){
+    clearTimeout(longTimer);
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (longFired){ longFired = false; return; }
+    var p = cellFromEvent(e); if (!p) return;
+    cur = p; act(p.x,p.y); render();
+  });
+  boardEl.addEventListener('pointerleave', function(){ clearTimeout(longTimer); });
+  boardEl.addEventListener('pointercancel', function(){ clearTimeout(longTimer); });
+
+  document.addEventListener('keydown', function(e){
+    if (state !== 'play'){ if ((e.key === 'Enter' || e.key === ' ') && !$('ovEnd').classList.contains('hide')){ e.preventDefault(); startGame(); } return; }
+    var k = e.key, used = true;
+    if (k === 'ArrowLeft') cur.x = Math.max(0, cur.x-1);
+    else if (k === 'ArrowRight') cur.x = Math.min(W-1, cur.x+1);
+    else if (k === 'ArrowUp') cur.y = Math.max(0, cur.y-1);
+    else if (k === 'ArrowDown') cur.y = Math.min(H-1, cur.y+1);
+    else if (k === ' ' || k === 'Enter'){ var c = cells[idx(cur.x,cur.y)]; if (c.open) chord(cur.x,cur.y); else reveal(cur.x,cur.y); }
+    else if (k === 'f' || k === 'F') toggleFlag(cur.x,cur.y);
+    else if (k === 'r' || k === 'R') startGame();
+    else used = false;
+    if (used){ e.preventDefault(); render(); }
+  });
+
+  function setMode(f){
+    flagMode = f;
+    $('mReveal').classList.toggle('on', !f);
+    $('mFlag').classList.toggle('on', f);
+  }
+  $('mReveal').onclick = function(){ setMode(false); };
+  $('mFlag').onclick = function(){ setMode(true); };
+  $('mNew').onclick = function(){ startGame(); };
+  $('again').onclick = function(){ startGame(); };
+  $('menu').onclick = function(){
+    state = 'idle'; clearInterval(timer);
+    $('ovEnd').classList.add('hide'); $('ovStart').classList.remove('hide');
+    buildMenu($('diffsStart')); showBest();
+  };
+  window.addEventListener('resize', function(){ if (cells && (state === 'play' || state === 'over')){ layout(); render(); } });
+
+  buildMenu($('diffsStart')); showBest();
+  // 初始預覽盤面（開始畫面背後）
+  (function(){ W = 9; H = 9; M = 10; cells = []; for (var i=0;i<81;i++) cells.push({mine:false,open:false,flag:false,n:0,el:null}); layout(); render(); })();
+})();
+</script>
+</body>
+</html>
