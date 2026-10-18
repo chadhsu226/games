@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>均值回歸 MEAN REVERT | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060612; --bg2:#0d0d24; --pink:#ff69b4; --yellow:#ffe44d; --green:#7fffb0;
+    --purple:#a855f7; --cyan:#22e0ff; --gold:#ffd700; --red:#ff5566; --text:#e8e8ff; --muted:#8888bb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  .wrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; padding:8px 8px 16px; user-select:none; -webkit-user-select:none; }
+  .topbar { width:min(94vw,420px); display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.85rem; }
+  .back:hover { color:var(--pink); }
+  h1 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1rem,4.2vw,1.35rem); letter-spacing:.1em;
+    background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; text-align:center; }
+  .panel { width:min(94vw,420px); display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .stat { background:rgba(13,13,36,.85); border:1px solid rgba(168,85,247,.35); border-radius:10px; padding:5px 4px; text-align:center; }
+  .stat .l { font-size:.62rem; color:var(--muted); }
+  .stat .v { font-family:'Orbitron',sans-serif; font-weight:600; font-size:1rem; color:var(--green); }
+  .stat.p .v { color:var(--yellow); }
+  .stat.t .v { color:var(--cyan); }
+  .stat.i .v { color:var(--pink); }
+  .stage { position:relative; width:min(94vw,420px); border-radius:14px; border:1px solid rgba(168,85,247,.45); box-shadow:0 0 28px rgba(168,85,247,.25),0 0 60px rgba(255,105,180,.1); background:#070718; overflow:hidden; touch-action:none; }
+  canvas { display:block; width:100%; height:auto; }
+  .bar { width:min(94vw,420px); height:10px; border-radius:6px; background:rgba(13,13,36,.9); border:1px solid rgba(168,85,247,.4); margin-bottom:6px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:100%; background:linear-gradient(90deg,var(--green),var(--cyan)); transition:background .2s; }
+  .bar.low > i { background:linear-gradient(90deg,var(--red),var(--pink)); }
+  .msg { width:min(94vw,420px); min-height:2.6em; margin-top:8px; font-size:.78rem; color:var(--muted); text-align:center; line-height:1.5; }
+  .touch { width:min(94vw,420px); display:flex; gap:8px; margin-top:8px; }
+  .tbtn { flex:1; background:rgba(13,13,36,.9); border:1px solid rgba(168,85,247,.5); color:var(--text); border-radius:12px; padding:16px 4px; font-family:'Orbitron',sans-serif; font-size:1.1rem; cursor:pointer; touch-action:none; }
+  .tbtn.down { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border-color:transparent; }
+  .overlay { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:18px 20px; text-align:center; background:rgba(6,6,18,.9); }
+  .overlay.hide { display:none; }
+  .overlay h2 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.5rem; background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .overlay p { font-size:.82rem; color:var(--muted); line-height:1.65; max-width:340px; }
+  .overlay p b { color:var(--yellow); font-weight:500; }
+  .overlay .big { font-family:'Orbitron',sans-serif; font-size:1.6rem; color:var(--green); }
+  .go { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border:0; border-radius:12px; padding:11px 30px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:.95rem; cursor:pointer; margin-top:4px; }
+  .go:active { transform:scale(.97); }
+  .res { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:.78rem; color:var(--muted); text-align:left; }
+  .res b { color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="index.html">← 返回遊戲選單</a><span style="font-size:.7rem;color:var(--muted)">最佳 <span id="bestTop">0</span></span></div>
+  <h1>均值回歸 MEAN REVERT</h1>
+  <div class="panel">
+    <div class="stat"><div class="l">分數</div><div class="v" id="sc">0</div></div>
+    <div class="stat p"><div class="l">連續在帶內</div><div class="v" id="cb">0.0s</div></div>
+    <div class="stat t"><div class="l">帶寬 ±</div><div class="v" id="bw">0</div></div>
+    <div class="stat i"><div class="l">z 值</div><div class="v" id="zv">0.0</div></div>
+  </div>
+  <div class="bar" id="capBar"><i id="cap"></i></div>
+  <div class="stage" id="stage">
+    <canvas id="cv" width="420" height="560"></canvas>
+    <div class="overlay" id="ovStart">
+      <h2>均值回歸</h2>
+      <p>你是日光咖啡的避險操盤手。價格受隨機衝擊亂飄，<b>←／→（或按住左右半邊畫面）</b>施加反向部位，把價格留在<b>均值帶</b>內。</p>
+      <p>在帶內累積分數與連擊；帶外會燒掉資本。撿金色<b>股利</b>回血加分；邊緣閃紅光代表<b>跳空衝擊</b>即將來襲，提前反向！帶寬會愈來愈窄（波動率上升）。</p>
+      <button class="go" id="btnStart">開始 START</button>
+      <p style="font-size:.7rem">空白鍵也可開始</p>
+    </div>
+    <div class="overlay hide" id="ovEnd">
+      <h2>資本耗盡</h2>
+      <div class="big" id="endScore">0</div>
+      <div class="res">
+        <span>存活時間</span><b id="rT">0s</b>
+        <span>帶內時間比例</span><b id="rP">0%</b>
+        <span>實現波動 σ</span><b id="rS">0</b>
+        <span>最長連擊</span><b id="rC">0s</b>
+        <span>收到股利</span><b id="rD">0</b>
+        <span>最佳紀錄</span><b id="rB">0</b>
+      </div>
+      <p id="endMsg"></p>
+      <button class="go" id="btnAgain">再來一局</button>
+    </div>
+  </div>
+  <div class="touch">
+    <button class="tbtn" id="tL">◀ 向左</button>
+    <button class="tbtn" id="tR">向右 ▶</button>
+  </div>
+  <div class="msg" id="msg">提示：連擊越久倍率越高（最高 ×5）。σ 是你「離均值多遠」的標準差，越小代表控制得越穩。</div>
+</div>
+<script>
+(function(){
+  var W=420,H=560,cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  var BALLY=H*0.72, CX=W/2;
+  var best=0; try{best=parseInt(localStorage.getItem('meanRevertBest')||'0',10)||0;}catch(e){}
+  document.getElementById('bestTop').textContent=best;
+  var $=function(i){return document.getElementById(i);};
+  var state='idle', left=false, right=false;
+  var x,v,t,cap,score,combo,bestCombo,inBand,totalT,sumSq,n,coins,hist,shock,shockTimer,flash,coinsGot,halfW,mu,floaters,last;
+  function rnd(a,b){return a+Math.random()*(b-a);}
+  function gauss(){var u=0,w=0;while(!u)u=Math.random();while(!w)w=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*w);}
+  function reset(){
+    x=CX;v=0;t=0;cap=100;score=0;combo=0;bestCombo=0;inBand=0;totalT=0;sumSq=0;n=0;coins=[];hist=[];
+    shock=null;shockTimer=rnd(4,6);flash=0;coinsGot=0;halfW=95;mu=CX;floaters=[];last=performance.now();
+  }
+  function start(){
+    reset();state='play';
+    $('ovStart').classList.add('hide');$('ovEnd').classList.add('hide');
+    last=performance.now();requestAnimationFrame(loop);
+  }
+  function mult(){return Math.min(5,1+Math.floor(combo/3));}
+  function end(){
+    state='over';
+    var s=Math.round(score);
+    var nb=s>best;
+    if(nb){best=s;try{localStorage.setItem('meanRevertBest',String(best));}catch(e){}}
+    $('bestTop').textContent=best;
+    $('endScore').textContent=s;
+    $('rT').textContent=t.toFixed(1)+'s';
+    $('rP').textContent=(totalT>0?Math.round(inBand/totalT*100):0)+'%';
+    var sd=n>0?Math.sqrt(sumSq/n):0;
+    $('rS').textContent=sd.toFixed(1)+' px';
+    $('rC').textContent=bestCombo.toFixed(1)+'s';
+    $('rD').textContent=coinsGot;
+    $('rB').textContent=best;
+    var pct=totalT>0?inBand/totalT:0;
+    $('endMsg').textContent=(nb?'🎉 新紀錄！ ':'')+(pct>0.8?'幾乎全程在帶內，σ 控制得很漂亮。':pct>0.55?'不錯，但別等偏離太遠才出手——小幅、早點修正比大力回拉更穩。':'偏離太久。均值回歸要靠提早反向，而不是等價格飛出去才追。');
+    $('ovEnd').classList.remove('hide');
+  }
+  function update(dt){
+    t+=dt;totalT+=dt;
+    // difficulty: band narrows, noise grows
+    var lvl=Math.min(1,t/90);
+    halfW=95-55*lvl;
+    var noise=70+110*lvl;
+    var acc=0;
+    if(left)acc-=520;
+    if(right)acc+=520;
+    // random walk forcing (Brownian) + occasional shock
+    v+=acc*dt;
+    v+=gauss()*noise*Math.sqrt(dt)*2.2;
+    v-=v*1.6*dt;
+    shockTimer-=dt;
+    if(!shock&&shockTimer<=0){shock={dir:Math.random()<0.5?-1:1,at:1.0,mag:rnd(260,380)+160*lvl};}
+    if(shock){
+      shock.at-=dt;flash=1;
+      if(shock.at<=0){v+=shock.dir*shock.mag;shock=null;shockTimer=rnd(4.5,7.5)-2.5*lvl;flash=0;floaters.push({tx:'跳空！',x:x,y:BALLY-30,l:1,c:'#ff5566'});}
+    }
+    x+=v*dt;
+    if(x<12){x=12;v=Math.abs(v)*0.4;}
+    if(x>W-12){x=W-12;v=-Math.abs(v)*0.4;}
+    var dev=x-mu, inside=Math.abs(dev)<=halfW;
+    n++;sumSq+=dev*dev;
+    if(inside){
+      inBand+=dt;combo+=dt;if(combo>bestCombo)bestCombo=combo;
+      score+=dt*10*mult()*(1+lvl);
+      cap=Math.min(100,cap+6*dt);
+    } else {
+      combo=0;cap-=(22+18*lvl)*dt;
+    }
+    // coins
+    if(Math.random()<dt*0.45&&coins.length<2){coins.push({x:mu+rnd(-halfW,halfW),y:-10});}
+    for(var i=coins.length-1;i>=0;i--){
+      var c=coins[i];c.y+=150*dt;
+      if(Math.abs(c.y-BALLY)<20&&Math.abs(c.x-x)<22){
+        coins.splice(i,1);coinsGot++;score+=50*mult();cap=Math.min(100,cap+12);
+        floaters.push({tx:'+股利',x:x,y:BALLY-20,l:1,c:'#ffd700'});
+      } else if(c.y>H+10){coins.splice(i,1);}
+    }
+    hist.push({x:x,i:inside});
+    if(hist.length>BALLY/3)hist.shift();
+    for(var j=floaters.length-1;j>=0;j--){floaters[j].l-=dt*1.4;floaters[j].y-=30*dt;if(floaters[j].l<=0)floaters.splice(j,1);}
+    if(cap<=0){cap=0;end();}
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0a20');g.addColorStop(1,'#07071a');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // band
+    ctx.fillStyle='rgba(127,255,176,0.08)';ctx.fillRect(mu-halfW,0,halfW*2,H);
+    ctx.strokeStyle='rgba(127,255,176,0.6)';ctx.lineWidth=2;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(mu-halfW,0);ctx.lineTo(mu-halfW,H);ctx.moveTo(mu+halfW,0);ctx.lineTo(mu+halfW,H);ctx.stroke();
+    ctx.strokeStyle='rgba(255,228,77,0.45)';ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(mu,0);ctx.lineTo(mu,H);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,228,77,0.7)';ctx.font='10px Orbitron';ctx.fillText('μ',mu+4,12);
+    // shock warning
+    if(shock){
+      var a=0.25+0.35*Math.abs(Math.sin(t*18));
+      var gx=shock.dir<0?W:0;
+      var gr=ctx.createLinearGradient(gx,0,shock.dir<0?W-70:70,0);
+      gr.addColorStop(0,'rgba(255,85,102,'+a+')');gr.addColorStop(1,'rgba(255,85,102,0)');
+      ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,85,102,.9)';ctx.font='bold 16px Orbitron';
+      ctx.fillText(shock.dir<0?'◀ 衝擊':'衝擊 ▶',shock.dir<0?W-90:10,40);
+    }
+    // trail
+    for(var i=0;i<hist.length;i++){
+      var y=BALLY-(hist.length-1-i)*3;
+      ctx.fillStyle=hist[i].i?'rgba(34,224,255,'+(0.08+0.5*i/hist.length)+')':'rgba(255,85,102,'+(0.08+0.5*i/hist.length)+')';
+      ctx.fillRect(hist[i].x-2,y,4,3);
+    }
+    // coins
+    coins.forEach(function(c){
+      ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(c.x,c.y,9,0,7);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#240a1e';ctx.font='bold 11px Orbitron';ctx.textAlign='center';ctx.fillText('$',c.x,c.y+4);ctx.textAlign='left';
+    });
+    // ball
+    var inside=Math.abs(x-mu)<=halfW;
+    ctx.fillStyle=inside?'#22e0ff':'#ff5566';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=18;
+    ctx.beginPath();ctx.arc(x,BALLY,11,0,7);ctx.fill();ctx.shadowBlur=0;
+    // control hint arrows
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='bold 14px Orbitron';
+    if(left){ctx.fillText('◀',x-34,BALLY+5);}
+    if(right){ctx.fillText('▶',x+20,BALLY+5);}
+    // floaters
+    floaters.forEach(function(f){ctx.globalAlpha=Math.max(0,f.l);ctx.fillStyle=f.c;ctx.font='bold 13px Noto Sans TC';ctx.textAlign='center';ctx.fillText(f.tx,f.x,f.y);ctx.textAlign='left';ctx.globalAlpha=1;});
+    // hud
+    $('sc').textContent=Math.round(score);
+    $('cb').textContent=combo.toFixed(1)+'s ×'+mult();
+    $('bw').textContent=Math.round(halfW);
+    $('zv').textContent=((x-mu)/(halfW/2)).toFixed(1);
+    var cp=$('cap');cp.style.width=cap+'%';$('capBar').className='bar'+(cap<30?' low':'');
+  }
+  function loop(now){
+    if(state!=='play')return;
+    var dt=Math.min(0.05,(now-last)/1000);last=now;
+    update(dt);draw();
+    if(state==='play')requestAnimationFrame(loop);
+  }
+  // input
+  function key(e,d){
+    var k=e.key;
+    if(k==='ArrowLeft'||k==='a'||k==='A'){left=d;e.preventDefault();}
+    else if(k==='ArrowRight'||k==='d'||k==='D'){right=d;e.preventDefault();}
+    else if((k===' '||k==='Enter')&&d&&state!=='play'){e.preventDefault();start();}
+  }
+  window.addEventListener('keydown',function(e){key(e,true);});
+  window.addEventListener('keyup',function(e){key(e,false);});
+  function bind(id,setter){
+    var b=$(id);
+    function on(e){e.preventDefault();setter(true);b.classList.add('down');}
+    function off(e){e.preventDefault();setter(false);b.classList.remove('down');}
+    b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);
+  }
+  bind('tL',function(d){left=d;});bind('tR',function(d){right=d;});
+  // stage: hold left/right half
+  var stage=$('stage');
+  function half(e){
+    if(state!=='play')return;
+    var r=stage.getBoundingClientRect(),px=(e.clientX-r.left)/r.width;
+    left=px<0.5;right=px>=0.5;
+  }
+  stage.addEventListener('pointerdown',function(e){half(e);});
+  stage.addEventListener('pointermove',function(e){if(e.buttons||e.pointerType==='touch')half(e);});
+  function rel(){left=false;right=false;}
+  stage.addEventListener('pointerup',rel);stage.addEventListener('pointercancel',rel);stage.addEventListener('pointerleave',rel);
+  $('btnStart').addEventListener('click',start);
+  $('btnAgain').addEventListener('click',start);
+  reset();draw();
+})();
+</script>
+</body>
+</html>
