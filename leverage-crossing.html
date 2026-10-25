@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>槓桿過街 LEVERAGE CROSSING | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060612; --bg2:#0d0d24; --pink:#ff69b4; --yellow:#ffe44d; --green:#7fffb0;
+    --purple:#a855f7; --cyan:#22e0ff; --gold:#ffd700; --red:#ff5566; --text:#e8e8ff; --muted:#8888bb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  .wrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; padding:8px 8px 16px; user-select:none; -webkit-user-select:none; }
+  .topbar { width:min(94vw,420px); display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.85rem; }
+  .back:hover { color:var(--pink); }
+  h1 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1rem,4.2vw,1.35rem); letter-spacing:.1em;
+    background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; text-align:center; }
+  .panel { width:min(94vw,420px); display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .stat { background:rgba(13,13,36,.85); border:1px solid rgba(168,85,247,.35); border-radius:10px; padding:5px 4px; text-align:center; }
+  .stat .l { font-size:.62rem; color:var(--muted); }
+  .stat .v { font-family:'Orbitron',sans-serif; font-weight:600; font-size:1rem; color:var(--green); }
+  .stat.p .v { color:var(--yellow); }
+  .stat.t .v { color:var(--cyan); }
+  .stat.i .v { color:var(--pink); }
+  .stage { position:relative; width:min(94vw,420px); border-radius:14px; border:1px solid rgba(168,85,247,.45); box-shadow:0 0 28px rgba(168,85,247,.25),0 0 60px rgba(255,105,180,.1); background:#070718; overflow:hidden; touch-action:none; }
+  canvas { display:block; width:100%; height:auto; }
+  .msg { width:min(94vw,420px); min-height:2.4em; margin-top:8px; font-size:.78rem; color:var(--muted); text-align:center; line-height:1.5; }
+  .pad { width:min(94vw,420px); display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr; gap:8px; margin-top:8px; }
+  .tbtn { background:rgba(13,13,36,.9); border:1px solid rgba(168,85,247,.5); color:var(--text); border-radius:12px; padding:14px 4px; font-family:'Orbitron',sans-serif; font-size:1.05rem; cursor:pointer; touch-action:none; }
+  .tbtn:active { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border-color:transparent; }
+  .tbtn.cash { background:linear-gradient(135deg,var(--green),var(--cyan)); color:#06201c; font-weight:900; font-size:.85rem; border-color:transparent; font-family:'Noto Sans TC',sans-serif; }
+  .overlay { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:18px 20px; text-align:center; background:rgba(6,6,18,.9); }
+  .overlay.hide { display:none; }
+  .overlay h2 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.5rem; background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .overlay p { font-size:.82rem; color:var(--muted); line-height:1.65; max-width:350px; }
+  .overlay p b { color:var(--yellow); font-weight:500; }
+  .overlay .big { font-family:'Orbitron',sans-serif; font-size:1.6rem; color:var(--green); }
+  .go { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border:0; border-radius:12px; padding:11px 30px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:.95rem; cursor:pointer; margin-top:4px; }
+  .go:active { transform:scale(.97); }
+  .res { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:.78rem; color:var(--muted); text-align:left; }
+  .res b { color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="index.html">← 返回遊戲選單</a><span class="back" id="bestTop">最佳 0</span></div>
+  <h1>槓桿過街 LEVERAGE CROSSING</h1>
+  <div class="panel">
+    <div class="stat"><div class="l">已兌現</div><div class="v" id="sBank">0</div></div>
+    <div class="stat p"><div class="l">未實現</div><div class="v" id="sPend">0</div></div>
+    <div class="stat i"><div class="l">槓桿</div><div class="v" id="sLev">×1.0</div></div>
+    <div class="stat t"><div class="l">收盤倒數</div><div class="v" id="sTime">150</div></div>
+  </div>
+  <div class="stage">
+    <canvas id="cv" width="414" height="598"></canvas>
+    <div class="overlay" id="ovStart">
+      <h2>槓桿過街</h2>
+      <p>星夜客運的司機要把資金穿過<b>三段車流</b>。每往前跨一條車道，<b>未實現利潤</b>就入帳，而且<b>槓桿倍率</b>會一路加碼。</p>
+      <p>在安全島按 <b>空白鍵／兌現</b> 才能落袋為安並把槓桿歸零；被撞到就<b>未實現全部歸零</b>、扣一條命。貪心撐過下一段，還是先收手？</p>
+      <p>方向鍵／WASD／滑動 移動 · 空白鍵 兌現 · 到達終點自動兌現並進下一關（+15 秒）。收盤鐘響時未兌現的利潤也會歸零。</p>
+      <button class="go" id="btnStart">開始交易</button>
+    </div>
+    <div class="overlay hide" id="ovEnd">
+      <h2>收盤結算</h2>
+      <div class="big" id="eScore">0</div>
+      <div id="eNew" style="color:var(--yellow);font-size:.85rem;min-height:1.2em"></div>
+      <div class="res" id="eRes"></div>
+      <p id="eNote"></p>
+      <button class="go" id="btnAgain">再來一局</button>
+    </div>
+  </div>
+  <div class="msg" id="msg">在安全島兌現，才算真的賺到。</div>
+  <div class="pad">
+    <button class="tbtn" data-d="L">◀</button>
+    <button class="tbtn" data-d="U">▲</button>
+    <button class="tbtn" data-d="D">▼</button>
+    <button class="tbtn cash" id="btnCash">兌現 CASH OUT</button>
+  </div>
+</div>
+<script>
+(function(){
+  var COLS = 9, ROWS = 13, CELL = 46;
+  var W = COLS*CELL, H = ROWS*CELL;
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var $ = function(i){ return document.getElementById(i); };
+  var SAFE = {0:'goal', 4:'island', 8:'island', 12:'start'};
+  var COLORS = ['#ff69b4','#ffe44d','#22e0ff','#a855f7','#ff8c42','#7fffb0'];
+  var LS = 'leverageCrossingBest';
+  var best = 0;
+  try { best = parseInt(localStorage.getItem(LS)) || 0; } catch(e){}
+  $('bestTop').textContent = '最佳 ' + best;
+
+  var S = null; // game state
+  var lanes = [], coins = [], stars = [];
+  for (var i=0;i<40;i++) stars.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.2+.3});
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+
+  function buildLevel(level){
+    lanes = []; coins = [];
+    var f = 1 + 0.1*(level-1);
+    for (var r=1;r<ROWS-1;r++){
+      if (SAFE[r] !== undefined) continue;
+      var w = [1,1.5,2,2.5][Math.floor(Math.random()*4)];
+      var gap = rnd(3.2, 5.2);
+      var P = w + gap;
+      var N = Math.ceil(14/P);
+      var T = N*P;
+      var spd = rnd(1.3, 2.7)*f;
+      lanes[r] = { dir: (r%2===0?1:-1), w:w, P:P, N:N, T:T, spd:spd, off:rnd(0,T), color:COLORS[Math.floor(Math.random()*COLORS.length)] };
+      if (Math.random() < 0.55) coins.push({r:r, c:Math.floor(rnd(0,COLS)), got:false});
+    }
+  }
+
+  function newGame(){
+    S = { level:1, bank:0, pend:0, held:0, lives:3, time:150, row:ROWS-1, col:4, minRow:ROWS-1, check:ROWS-1,
+          dead:0, over:false, started:true, cd:0, t:0, lost:0, banks:0, deaths:0, maxLevel:1, rowsCrossed:0, maxLev:1, flash:0, floaters:[] };
+    buildLevel(1);
+    updateHud();
+  }
+
+  function lev(){ return 1 + 0.5*S.held; }
+
+  function say(t){ $('msg').textContent = t; }
+
+  function floater(txt, color){
+    S.floaters.push({x:S.col*CELL+CELL/2, y:S.row*CELL, t:0, txt:txt, color:color});
+  }
+
+  function updateHud(){
+    $('sBank').textContent = S.bank;
+    $('sPend').textContent = Math.round(S.pend);
+    $('sLev').textContent = '×' + lev().toFixed(1);
+    $('sTime').textContent = Math.max(0, Math.ceil(S.time));
+  }
+
+  function move(dir){
+    if (!S || S.over || S.dead>0 || S.cd>0) return;
+    var nr = S.row, nc = S.col;
+    if (dir==='U') nr--; else if (dir==='D') nr++; else if (dir==='L') nc--; else if (dir==='R') nc++;
+    if (nr<0 || nr>=ROWS || nc<0 || nc>=COLS) return;
+    S.row = nr; S.col = nc; S.cd = 0.09;
+    if (dir==='U' && nr < S.minRow){
+      S.minRow = nr;
+      S.rowsCrossed++;
+      var isSafe = SAFE[nr] !== undefined;
+      var gain = Math.round(10 * lev());
+      S.pend += gain;
+      S.held++;
+      if (S.held > S.maxLev) S.maxLev = S.held;
+      floater('+' + gain, '#ffe44d');
+      if (isSafe) { S.check = nr; }
+    }
+    if (SAFE[nr] !== undefined && nr < S.check) S.check = nr;
+    // coins
+    for (var i=0;i<coins.length;i++){
+      var c = coins[i];
+      if (!c.got && c.r===nr && c.c===nc){
+        c.got = true;
+        var g = Math.round(15 * lev());
+        S.pend += g;
+        floater('+' + g + ' 股利', '#7fffb0');
+      }
+    }
+    if (nr === 0) { reachGoal(); }
+    updateHud();
+  }
+
+  function cashOut(){
+    if (!S || S.over || S.dead>0) return;
+    if (SAFE[S.row] === undefined){ say('車道上不能兌現！先走到安全島（綠色區）。'); return; }
+    if (S.pend <= 0){ say('沒有未實現利潤可兌現。'); return; }
+    S.bank += Math.round(S.pend);
+    floater('兌現 +' + Math.round(S.pend), '#22e0ff');
+    S.pend = 0; S.held = 0; S.banks++;
+    S.minRow = S.row;
+    say('落袋為安，槓桿歸零。');
+    updateHud();
+  }
+
+  function reachGoal(){
+    var bonus = 50 * S.level;
+    S.pend += bonus;
+    S.bank += Math.round(S.pend);
+    floater('到岸 +' + Math.round(S.pend), '#ffd700');
+    S.pend = 0; S.held = 0; S.banks++;
+    S.level++; S.maxLevel = S.level;
+    S.time += 15;
+    S.row = ROWS-1; S.col = 4; S.minRow = ROWS-1; S.check = ROWS-1;
+    buildLevel(S.level);
+    say('第 ' + S.level + ' 關！車流更快了（+15 秒）。');
+  }
+
+  function die(){
+    S.dead = 0.8; S.deaths++; S.lives--; S.lost += Math.round(S.pend);
+    say('被撞了！未實現的 ' + Math.round(S.pend) + ' 全部歸零。');
+    S.pend = 0; S.held = 0; S.flash = 0.4;
+    updateHud();
+  }
+
+  function respawn(){
+    S.row = S.check; S.col = 4; S.minRow = S.check;
+    if (S.row === 0){ S.row = ROWS-1; S.check = ROWS-1; S.minRow = ROWS-1; }
+  }
+
+  function vehiclesAt(r){
+    var L = lanes[r], out = [];
+    if (!L) return out;
+    var shift = S.t * L.spd * L.dir;
+    for (var k=0;k<L.N;k++){
+      var x = ((L.off + k*L.P + shift) % L.T + L.T) % L.T - 3;
+      out.push(x);
+    }
+    return out;
+  }
+
+  function hit(){
+    var r = S.row;
+    var L = lanes[r];
+    if (!L) return false;
+    var xs = vehiclesAt(r);
+    var a = S.col + 0.18, b = S.col + 0.82;
+    for (var i=0;i<xs.length;i++){
+      var x0 = xs[i], x1 = xs[i] + L.w;
+      if (a < x1 && b > x0) return true;
+    }
+    return false;
+  }
+
+  function endGame(){
+    S.over = true;
+    var finalScore = S.bank;
+    var isNew = finalScore > best;
+    if (isNew){ best = finalScore; try { localStorage.setItem(LS, String(best)); } catch(e){} }
+    $('bestTop').textContent = '最佳 ' + best;
+    $('eScore').textContent = finalScore;
+    $('eNew').textContent = isNew && finalScore>0 ? '★ 新紀錄！' : '最佳紀錄：' + best;
+    $('eRes').innerHTML =
+      '<span>抵達關卡 <b>'+S.level+'</b></span><span>兌現次數 <b>'+S.banks+'</b></span>'+
+      '<span>撞車次數 <b>'+S.deaths+'</b></span><span>最高槓桿 <b>×'+(1+0.5*S.maxLev).toFixed(1)+'</b></span>'+
+      '<span>穿越車道 <b>'+S.rowsCrossed+'</b></span><span>歸零利潤 <b>'+(S.lost+Math.round(S.pend))+'</b></span>';
+    var lostAll = S.lost + Math.round(S.pend);
+    $('eNote').textContent = lostAll > S.bank
+      ? '你歸零的利潤（'+lostAll+'）比兌現的還多——槓桿加得愈高，爆倉的代價就愈大。下次試試在第二條車道後就先收手。'
+      : '兌現的利潤多於歸零的損失，風險控管不錯！期望值為正的賭局，要記得分批落袋。';
+    $('ovEnd').classList.remove('hide');
+  }
+
+  function drawBoard(){
+    ctx.fillStyle = '#070718'; ctx.fillRect(0,0,W,H);
+    for (var r=0;r<ROWS;r++){
+      var y = r*CELL;
+      if (SAFE[r] !== undefined){
+        var g = ctx.createLinearGradient(0,y,0,y+CELL);
+        if (SAFE[r]==='goal'){ g.addColorStop(0,'rgba(255,215,0,.35)'); g.addColorStop(1,'rgba(255,105,180,.15)'); }
+        else { g.addColorStop(0,'rgba(127,255,176,.22)'); g.addColorStop(1,'rgba(34,224,255,.1)'); }
+        ctx.fillStyle = g; ctx.fillRect(0,y,W,CELL);
+        ctx.fillStyle = 'rgba(232,232,255,.55)'; ctx.font = '700 11px "Noto Sans TC"'; ctx.textAlign='left';
+        ctx.fillText(SAFE[r]==='goal'?'終點・自動兌現':(SAFE[r]==='start'?'起點':'安全島・可兌現'), 8, y+CELL/2+4);
+      } else {
+        ctx.fillStyle = (r%2? 'rgba(13,13,36,.95)':'rgba(18,16,42,.95)'); ctx.fillRect(0,y,W,CELL);
+        ctx.strokeStyle = 'rgba(168,85,247,.18)'; ctx.setLineDash([10,10]); ctx.beginPath();
+        ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    for (var i=0;i<stars.length;i++){ ctx.fillStyle='rgba(255,255,255,.25)'; ctx.fillRect(stars[i].x,stars[i].y,stars[i].r,stars[i].r); }
+  }
+
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function draw(){
+    drawBoard();
+    if (!S) return;
+    // coins
+    for (var i=0;i<coins.length;i++){
+      var c = coins[i]; if (c.got) continue;
+      var cx = c.c*CELL+CELL/2, cy = c.r*CELL+CELL/2 + Math.sin(S.t*4+i)*2;
+      ctx.shadowColor = '#7fffb0'; ctx.shadowBlur = 12; ctx.fillStyle = '#7fffb0';
+      ctx.beginPath(); ctx.arc(cx,cy,8,0,6.283); ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle = '#06201c'; ctx.font='900 11px Orbitron'; ctx.textAlign='center'; ctx.fillText('$',cx,cy+4);
+    }
+    // vehicles
+    for (var r=1;r<ROWS-1;r++){
+      var L = lanes[r]; if (!L) continue;
+      var xs = vehiclesAt(r);
+      for (var k=0;k<xs.length;k++){
+        var vx = xs[k]*CELL, vy = r*CELL+7, vw = L.w*CELL, vh = CELL-14;
+        ctx.shadowColor = L.color; ctx.shadowBlur = 14; ctx.fillStyle = L.color;
+        rr(vx,vy,vw,vh,8); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(6,6,18,.55)';
+        var hx = L.dir>0 ? vx+vw-12 : vx+4;
+        ctx.fillRect(hx, vy+5, 8, vh-10);
+      }
+    }
+    // player
+    if (S.dead<=0 || Math.floor(S.dead*12)%2===0){
+      var px = S.col*CELL+CELL/2, py = S.row*CELL+CELL/2;
+      ctx.shadowColor = '#ffe44d'; ctx.shadowBlur = 18;
+      var g2 = ctx.createLinearGradient(px-14,py-14,px+14,py+14); g2.addColorStop(0,'#ff69b4'); g2.addColorStop(1,'#ffe44d');
+      ctx.fillStyle = g2; rr(px-14,py-14,28,28,8); ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle = '#240a1e'; ctx.font='900 13px Orbitron'; ctx.textAlign='center'; ctx.fillText('×'+lev().toFixed(1), px, py+5);
+    }
+    // floaters
+    for (var j=0;j<S.floaters.length;j++){
+      var f = S.floaters[j];
+      ctx.globalAlpha = Math.max(0,1-f.t/1.1); ctx.fillStyle = f.color; ctx.font='700 14px "Noto Sans TC"'; ctx.textAlign='center';
+      ctx.fillText(f.txt, f.x, f.y - f.t*34); ctx.globalAlpha = 1;
+    }
+    // lives
+    ctx.textAlign='right'; ctx.font='700 14px Orbitron'; ctx.fillStyle='#ff5566';
+    var hearts=''; for (var h=0;h<S.lives;h++) hearts+='♥ ';
+    ctx.fillText(hearts + '  LV' + S.level, W-8, 16);
+    if (S.flash>0){ ctx.fillStyle='rgba(255,85,102,'+(S.flash*1.2)+')'; ctx.fillRect(0,0,W,H); }
+  }
+
+  var last = 0;
+  function loop(ts){
+    var dt = Math.min(0.05, (ts-last)/1000 || 0); last = ts;
+    if (S && !S.over){
+      S.t += dt; S.cd = Math.max(0, S.cd-dt); S.flash = Math.max(0,S.flash-dt);
+      for (var i=S.floaters.length-1;i>=0;i--){ S.floaters[i].t += dt; if (S.floaters[i].t>1.1) S.floaters.splice(i,1); }
+      if (S.dead>0){
+        S.dead -= dt;
+        if (S.dead<=0){
+          if (S.lives<=0) endGame(); else respawn();
+        }
+      } else {
+        S.time -= dt;
+        if (hit()) die();
+        if (S.time<=0){ S.time = 0; S.lost += 0; endGame(); }
+      }
+      updateHud();
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // input
+  var KEYS = {ArrowUp:'U',ArrowDown:'D',ArrowLeft:'L',ArrowRight:'R',w:'U',s:'D',a:'L',d:'R',W:'U',S:'D',A:'L',D:'R'};
+  window.addEventListener('keydown', function(e){
+    if (e.key===' ' || e.code==='Space'){ e.preventDefault(); if (!S || S.over) return; cashOut(); return; }
+    var d = KEYS[e.key];
+    if (d){ e.preventDefault(); move(d); }
+  });
+  var tb = document.querySelectorAll('.tbtn[data-d]');
+  for (var i=0;i<tb.length;i++){
+    (function(b){ b.addEventListener('pointerdown', function(e){ e.preventDefault(); move(b.getAttribute('data-d')); }); })(tb[i]);
+  }
+  $('btnCash').addEventListener('pointerdown', function(e){ e.preventDefault(); cashOut(); });
+  // swipe
+  var sx=0, sy=0, tracking=false;
+  var stage = document.querySelector('.stage');
+  stage.addEventListener('pointerdown', function(e){ if (e.target.tagName==='BUTTON') return; sx=e.clientX; sy=e.clientY; tracking=true; });
+  stage.addEventListener('pointerup', function(e){
+    if (!tracking) return; tracking=false;
+    var dx=e.clientX-sx, dy=e.clientY-sy;
+    if (Math.max(Math.abs(dx),Math.abs(dy))<18){ move('U'); return; } // tap = forward
+    if (Math.abs(dx)>Math.abs(dy)) move(dx>0?'R':'L'); else move(dy>0?'D':'U');
+  });
+
+  function start(){
+    $('ovStart').classList.add('hide'); $('ovEnd').classList.add('hide');
+    newGame(); say('往上衝！記得在安全島兌現。');
+  }
+  $('btnStart').addEventListener('click', start);
+  $('btnAgain').addEventListener('click', start);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
