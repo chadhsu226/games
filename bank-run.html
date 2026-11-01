@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>擠兌追逐 BANK RUN | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060612; --bg2:#0d0d24; --pink:#ff69b4; --yellow:#ffe44d; --green:#7fffb0;
+    --purple:#a855f7; --cyan:#22e0ff; --gold:#ffd700; --red:#ff5566; --text:#e8e8ff; --muted:#8888bb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  .wrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; padding:8px 8px 16px; user-select:none; -webkit-user-select:none; }
+  .topbar { width:min(96vw,640px); display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.85rem; }
+  .back:hover { color:var(--pink); }
+  h1 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(.95rem,4vw,1.4rem); letter-spacing:.08em;
+    background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; text-align:center; }
+  .panel { width:min(96vw,640px); display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .stat { background:rgba(13,13,36,.85); border:1px solid rgba(168,85,247,.35); border-radius:10px; padding:5px 4px; text-align:center; }
+  .stat .l { font-size:.62rem; color:var(--muted); }
+  .stat .v { font-family:'Orbitron',sans-serif; font-weight:600; font-size:.95rem; color:var(--green); }
+  .stat.p .v { color:var(--yellow); }
+  .stat.t .v { color:var(--cyan); }
+  .stat.i .v { color:var(--pink); }
+  .stage { position:relative; width:min(96vw,640px); border-radius:14px; border:1px solid rgba(168,85,247,.45); box-shadow:0 0 28px rgba(168,85,247,.25),0 0 60px rgba(255,105,180,.1); background:#070718; overflow:hidden; }
+  canvas { display:block; width:100%; height:auto; touch-action:none; }
+  .dpad { width:min(96vw,640px); margin-top:8px; display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:auto auto; gap:6px; max-width:260px; }
+  .dpad button { background:rgba(13,13,36,.9); border:1px solid rgba(34,224,255,.5); color:var(--cyan); border-radius:12px; padding:12px 4px; font-size:1.2rem; cursor:pointer; touch-action:manipulation; }
+  .dpad button:active { background:rgba(34,224,255,.25); }
+  .dpad .u { grid-column:2; grid-row:1; } .dpad .l { grid-column:1; grid-row:2; } .dpad .d { grid-column:2; grid-row:2; } .dpad .r { grid-column:3; grid-row:2; }
+  .msg { width:min(96vw,640px); min-height:2.6em; margin-top:8px; font-size:.78rem; color:var(--muted); text-align:center; line-height:1.5; }
+  .overlay { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:14px 20px; text-align:center; background:rgba(6,6,18,.93); }
+  .overlay.hide { display:none; }
+  .overlay h2 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1.1rem,5vw,1.7rem); background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .overlay p { font-size:.82rem; color:var(--muted); line-height:1.65; max-width:420px; }
+  .overlay p b { color:var(--yellow); font-weight:500; }
+  .overlay .big { font-family:'Orbitron',sans-serif; font-size:1.6rem; color:var(--green); }
+  .go { background:linear-gradient(135deg,var(--pink),var(--yellow)); color:#240a1e; border:0; border-radius:12px; padding:11px 30px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:.95rem; cursor:pointer; touch-action:manipulation; }
+  .go:active { transform:scale(.97); }
+  .res { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:.78rem; color:var(--muted); text-align:left; }
+  .res b { color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="index.html">← 返回遊戲選單</a><span style="font-size:.7rem;color:var(--muted)">最佳 <span id="bestTop">0</span></span></div>
+  <h1>擠兌追逐 BANK RUN</h1>
+  <div class="panel">
+    <div class="stat p"><div class="l">分數</div><div class="v" id="sc">0</div></div>
+    <div class="stat t"><div class="l">關卡</div><div class="v" id="lv">1</div></div>
+    <div class="stat i"><div class="l">客運車隊</div><div class="v" id="lf">3</div></div>
+    <div class="stat"><div class="l">存款回收</div><div class="v" id="cov">0%</div></div>
+  </div>
+  <div class="stage">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="ovStart">
+      <h2>擠兌追逐 BANK RUN</h2>
+      <p>星夜客運的小巴要在銀行迷宮裡<b>回收所有存款</b>！四隻<b>擠兌恐慌</b>會追著你跑；吃到閃爍的<b>央行注資</b>後恐慌暫時冷卻，可以反過來吞掉它們——連吞分數<b>倍數複利</b>（200→400→800→1600）。日光咖啡 ☕ 偶爾出現，是額外獎勵。</p>
+      <p>操作：方向鍵／WASD／螢幕滑動／下方方向鈕。空白鍵或 P 暫停。</p>
+      <button class="go" id="btnStart">開始 START</button>
+    </div>
+    <div class="overlay hide" id="ovPause"><h2>暫停</h2><p>按空白鍵、P 或點一下繼續。</p><button class="go" id="btnResume">繼續</button></div>
+    <div class="overlay hide" id="ovEnd">
+      <h2 id="endTitle">銀行倒閉</h2>
+      <div class="big" id="endScore">0</div>
+      <div class="res" id="endRes"></div>
+      <p id="endNote"></p>
+      <button class="go" id="btnAgain">再來一局 AGAIN</button>
+    </div>
+  </div>
+  <div class="dpad">
+    <button class="u" data-d="3">▲</button><button class="l" data-d="2">◀</button><button class="d" data-d="1">▼</button><button class="r" data-d="0">▶</button>
+  </div>
+  <div class="msg" id="msg">金色小點＝存款；大光球＝央行注資。轉角預判比手速重要。</div>
+</div>
+<script>
+(function(){
+'use strict';
+var MAP=[
+"###################",
+"#o.......#.......o#",
+"#.##.###.#.###.##.#",
+"#.................#",
+"#.##.#.#####.#.##.#",
+"#....#...#...#....#",
+"####.###.#.###.####",
+"#....#.......#....#",
+"#.##.#.#####.#.##.#",
+"#.................#",
+"#.##.###.#.###.##.#",
+"#o.......P.......o#",
+"###################"];
+var COLS=19, ROWS=13, C=32;
+var DV=[[1,0],[0,1],[-1,0],[0,-1]]; // 右 下 左 上
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+cv.width=COLS*C; cv.height=ROWS*C;
+var $=function(id){return document.getElementById(id);};
+var best=0;
+try{ best=parseInt(localStorage.getItem('bankrun_best')||'0',10)||0; }catch(e){}
+$('bestTop').textContent=best;
+
+function isWall(x,y){ return x<0||y<0||x>=COLS||y>=ROWS||MAP[y][x]==='#'; }
+function free(x,y){ return !isWall(x,y); }
+
+// 預先繪製牆
+var wallCv=document.createElement('canvas'); wallCv.width=cv.width; wallCv.height=cv.height;
+(function(){
+  var g=wallCv.getContext('2d');
+  g.fillStyle='#0a0a22'; g.fillRect(0,0,wallCv.width,wallCv.height);
+  var y,x;
+  for(y=0;y<ROWS;y++)for(x=0;x<COLS;x++){ if(MAP[y][x]==='#'){ g.fillStyle='#14123a'; g.fillRect(x*C,y*C,C,C); } }
+  g.strokeStyle='#a855f7'; g.lineWidth=2.5; g.shadowColor='#a855f7'; g.shadowBlur=8; g.lineCap='round';
+  for(y=0;y<ROWS;y++)for(x=0;x<COLS;x++){
+    if(MAP[y][x]!=='#') continue;
+    g.beginPath();
+    if(y>0&&MAP[y-1][x]!=='#'){ g.moveTo(x*C+2,y*C+1); g.lineTo(x*C+C-2,y*C+1); }
+    if(y<ROWS-1&&MAP[y+1][x]!=='#'){ g.moveTo(x*C+2,y*C+C-1); g.lineTo(x*C+C-2,y*C+C-1); }
+    if(x>0&&MAP[y][x-1]!=='#'){ g.moveTo(x*C+1,y*C+2); g.lineTo(x*C+1,y*C+C-2); }
+    if(x<COLS-1&&MAP[y][x+1]!=='#'){ g.moveTo(x*C+C-1,y*C+2); g.lineTo(x*C+C-1,y*C+C-2); }
+    g.stroke();
+  }
+})();
+
+var GCOL=['#ff5566','#ff69b4','#22e0ff','#ffb347'];
+var SCATTER=[[17,0],[1,0],[17,12],[1,12]];
+var HOME=[9,7];
+
+var S; // 遊戲狀態
+function newGame(){
+  S={ state:'ready', timer:1.6, score:0, level:1, lives:3, nextLife:10000, eaten:0, totalEaten:0, deaths:0, ghostsEaten:0, maxChain:0,
+      dots:null, dotsLeft:0, dotsTotal:0, p:null, ghosts:[], fright:0, chain:0, modeT:0, bonus:null, bonusSpawned:0, popups:[], want:-1, t:0 };
+  loadLevel();
+}
+function loadLevel(){
+  S.dots=[]; S.dotsLeft=0;
+  for(var y=0;y<ROWS;y++){ S.dots[y]=[]; for(var x=0;x<COLS;x++){ var ch=MAP[y][x]; var v=0; if(ch==='.')v=1; else if(ch==='o')v=2; S.dots[y][x]=v; if(v)S.dotsLeft++; } }
+  S.dotsTotal=S.dotsLeft; S.bonusSpawned=0; S.bonus=null;
+  resetActors(); S.state='ready'; S.timer=1.6; updateHud();
+}
+function resetActors(){
+  S.p={x:9,y:11,d:-1,t:0,mouth:0};
+  S.want=-1; S.fright=0; S.chain=0; S.modeT=0;
+  var rel=[0.4,3,6.5,10]; var lv=S.level;
+  S.ghosts=[];
+  for(var i=0;i<4;i++){ S.ghosts.push({id:i,x:HOME[0],y:HOME[1],d:-1,t:0,wait:Math.max(0.4,rel[i]-(lv-1)*0.6),fr:false,dead:false}); }
+}
+function pSpeed(){ return 5.2; }
+function gSpeed(){ return Math.min(5.7, 4.1+0.22*(S.level-1)); }
+
+function updateHud(){
+  $('sc').textContent=S.score; $('lv').textContent=S.level; $('lf').textContent=Math.max(0,S.lives);
+  $('cov').textContent=Math.round((S.dotsTotal-S.dotsLeft)/S.dotsTotal*100)+'%';
+}
+
+// 實體移動
+function stepEntity(e,dt,speed,chooser,arrive){
+  var move=speed*dt, guard=0;
+  while(move>0&&guard++<8){
+    if(e.d<0){ var nd=chooser(e); if(nd<0) break; e.d=nd; e.t=0; }
+    var rem=1-e.t;
+    if(move<rem){ e.t+=move; move=0; }
+    else {
+      move-=rem; e.x+=DV[e.d][0]; e.y+=DV[e.d][1]; e.t=0;
+      if(arrive) arrive(e);
+      var n2=chooser(e); if(n2<0){ e.d=-1; break; } e.d=n2;
+    }
+  }
+}
+function pChooser(e){
+  if(S.want>=0 && free(e.x+DV[S.want][0],e.y+DV[S.want][1])) return S.want;
+  if(e.d>=0 && free(e.x+DV[e.d][0],e.y+DV[e.d][1])) return e.d;
+  return -1;
+}
+function pArrive(e){
+  var v=S.dots[e.y][e.x];
+  if(v===1){ S.dots[e.y][e.x]=0; S.dotsLeft--; S.score+=10; }
+  else if(v===2){ S.dots[e.y][e.x]=0; S.dotsLeft--; S.score+=50; powerUp(); }
+  if(v){ updateHud(); checkLife(); }
+  if(S.bonus && S.bonus.x===e.x && S.bonus.y===e.y){
+    var pts=500*S.level; S.score+=pts; popup(e.x,e.y,'+'+pts+' ☕','#ffe44d'); S.bonus=null; updateHud(); checkLife();
+  }
+  var done=S.dotsTotal-S.dotsLeft;
+  if(!S.bonus && S.bonusSpawned<2 && done>=(S.bonusSpawned===0?60:130)){ S.bonusSpawned++; S.bonus={x:9,y:9,life:10}; }
+  if(S.dotsLeft<=0) levelClear();
+}
+function checkLife(){ if(S.score>=S.nextLife){ S.lives++; S.nextLife+=10000; popup(S.p.x,S.p.y,'+1 車隊','#7fffb0'); updateHud(); } }
+function powerUp(){
+  S.fright=Math.max(2.5,7-(S.level-1)*0.6); S.chain=0;
+  for(var i=0;i<S.ghosts.length;i++){ var g=S.ghosts[i]; if(!g.dead){ g.fr=true; if(g.wait<=0&&g.d>=0&&g.t>0){ reverse(g); } } }
+}
+function reverse(e){
+  var nd=(e.d+2)%4; e.x+=DV[e.d][0]; e.y+=DV[e.d][1]; e.t=1-e.t; e.d=nd;
+}
+function popup(x,y,txt,col){ S.popups.push({x:x,y:y,txt:txt,col:col,life:1.1}); }
+
+// 恐慌行為
+function scatterMode(){ var c=S.modeT%24; return c<6; }
+function gChooser(g){
+  if(g.wait>0) return -1;
+  var opts=[], i, back=g.d>=0?(g.d+2)%4:-1;
+  for(i=0;i<4;i++){ if(i===back) continue; if(free(g.x+DV[i][0],g.y+DV[i][1])) opts.push(i); }
+  if(!opts.length){ for(i=0;i<4;i++) if(free(g.x+DV[i][0],g.y+DV[i][1])) opts.push(i); }
+  if(!opts.length) return -1;
+  if(g.fr&&!g.dead) return opts[Math.floor(Math.random()*opts.length)];
+  var tx,ty,p=S.p;
+  if(g.dead){ tx=HOME[0]; ty=HOME[1]; }
+  else if(scatterMode()){ tx=SCATTER[g.id][0]; ty=SCATTER[g.id][1]; }
+  else if(g.id===0){ tx=p.x; ty=p.y; }
+  else if(g.id===1){ var d=p.d>=0?p.d:0; tx=p.x+DV[d][0]*4; ty=p.y+DV[d][1]*4; }
+  else if(g.id===2){ if(Math.random()<0.4) return opts[Math.floor(Math.random()*opts.length)]; tx=p.x; ty=p.y; }
+  else { var dd=(g.x-p.x)*(g.x-p.x)+(g.y-p.y)*(g.y-p.y); if(dd>36){ tx=p.x; ty=p.y; } else { tx=SCATTER[3][0]; ty=SCATTER[3][1]; } }
+  var bi=opts[0], bd=1e9;
+  for(i=0;i<opts.length;i++){ var nx=g.x+DV[opts[i]][0], ny=g.y+DV[opts[i]][1]; var dist=(nx-tx)*(nx-tx)+(ny-ty)*(ny-ty); if(dist<bd){ bd=dist; bi=opts[i]; } }
+  return bi;
+}
+function gArrive(g){ if(g.dead && g.x===HOME[0] && g.y===HOME[1]){ g.dead=false; g.fr=false; g.wait=0.8; g.d=-1; g.t=0; } }
+function gpos(e){ var d=e.d>=0?e.d:0; var t=e.d>=0?e.t:0; return [e.x+DV[d][0]*t, e.y+DV[d][1]*t]; }
+
+function levelClear(){
+  S.state='clear'; S.timer=1.8; S.score+=1000*S.level; popup(S.p.x,S.p.y,'流動性 100% +'+(1000*S.level),'#7fffb0'); updateHud();
+}
+function loseLife(){
+  S.state='dying'; S.timer=1.3; S.deaths++; S.lives--; updateHud();
+}
+function endGame(){
+  S.state='over';
+  var nb=S.score>best; if(nb){ best=S.score; try{ localStorage.setItem('bankrun_best',String(best)); }catch(e){} }
+  $('bestTop').textContent=best;
+  $('endTitle').textContent=nb?'新紀錄！':'銀行倒閉';
+  $('endScore').textContent=S.score;
+  var cover=Math.round((S.eaten)/1);
+  $('endRes').innerHTML='<span>抵達關卡 <b>'+S.level+'</b></span><span>最佳紀錄 <b>'+best+'</b></span><span>回收存款 <b>'+S.eaten+'</b></span><span>擠兌次數 <b>'+S.deaths+'</b></span><span>吞下恐慌 <b>'+S.ghostsEaten+'</b></span><span>最高連吞 <b>×'+Math.pow(2,Math.max(0,S.maxChain-1))+'</b></span>';
+  $('endNote').textContent=S.maxChain>=4?'四連吞！你把「複利」用在恐慌身上了。':'提示：留著央行注資，等恐慌聚在一起再吃，連吞倍數才會滾起來。';
+  $('ovEnd').classList.remove('hide');
+}
+
+function update(dt){
+  S.t+=dt;
+  var i;
+  for(i=S.popups.length-1;i>=0;i--){ S.popups[i].life-=dt; if(S.popups[i].life<=0) S.popups.splice(i,1); }
+  if(S.state==='ready'){ S.timer-=dt; if(S.timer<=0) S.state='play'; return; }
+  if(S.state==='dying'){ S.timer-=dt; if(S.timer<=0){ if(S.lives<=0) endGame(); else { resetActors(); S.state='ready'; S.timer=1.4; } } return; }
+  if(S.state==='clear'){ S.timer-=dt; if(S.timer<=0){ S.level++; loadLevel(); } return; }
+  if(S.state!=='play') return;
+  S.modeT+=S.fright>0?0:dt;
+  if(S.fright>0){ S.fright-=dt; if(S.fright<=0){ S.fright=0; for(i=0;i<4;i++) S.ghosts[i].fr=false; } }
+  if(S.bonus){ S.bonus.life-=dt; if(S.bonus.life<=0) S.bonus=null; }
+  var before=S.dotsTotal-S.dotsLeft;
+  stepEntity(S.p,dt,pSpeed(),pChooser,pArrive);
+  S.eaten=Math.max(S.eaten,0);
+  S.p.mouth+=dt*(S.p.d>=0?14:0);
+  for(i=0;i<4;i++){
+    var g=S.ghosts[i];
+    if(g.wait>0){ g.wait-=dt; continue; }
+    var sp=g.dead?9:(g.fr?2.9:gSpeed());
+    stepEntity(g,dt,sp,gChooser,gArrive);
+  }
+  if(S.state!=='play') return;
+  // 碰撞
+  var pp=gpos(S.p);
+  for(i=0;i<4;i++){
+    var g2=S.ghosts[i]; if(g2.dead) continue;
+    var gp=g2.wait>0?[HOME[0]+(i-1.5)*0.25,HOME[1]]:gpos(g2);
+    var dx=pp[0]-gp[0], dy=pp[1]-gp[1];
+    if(dx*dx+dy*dy<0.32){
+      if(g2.fr){
+        S.chain++; S.maxChain=Math.max(S.maxChain,S.chain); S.ghostsEaten++;
+        var pts=200*Math.pow(2,S.chain-1); S.score+=pts; g2.dead=true; g2.fr=false; g2.wait=0;
+        popup(gp[0],gp[1],'+'+pts,'#22e0ff'); updateHud(); checkLife();
+      } else { loseLife(); return; }
+    }
+  }
+}
+// 存款計數：以剩餘點數推算
+function syncEaten(){ S.eaten=S.totalEaten+(S.dotsTotal-S.dotsLeft); }
+
+// 繪製
+function draw(){
+  ctx.drawImage(wallCv,0,0);
+  var x,y,tt=S.t;
+  for(y=0;y<ROWS;y++)for(x=0;x<COLS;x++){
+    var v=S.dots[y][x];
+    if(v===1){ ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=6; ctx.beginPath(); ctx.arc(x*C+C/2,y*C+C/2,3,0,6.283); ctx.fill(); }
+    else if(v===2){ var r=7+Math.sin(tt*8)*1.8; ctx.fillStyle='#7fffb0'; ctx.shadowColor='#7fffb0'; ctx.shadowBlur=16; ctx.beginPath(); ctx.arc(x*C+C/2,y*C+C/2,r,0,6.283); ctx.fill(); }
+  }
+  ctx.shadowBlur=0;
+  if(S.bonus){ ctx.font='22px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('☕',S.bonus.x*C+C/2,S.bonus.y*C+C/2+1); }
+  var i;
+  // 玩家
+  if(S.state!=='dying' || S.timer>0.15){
+    var pp=gpos(S.p), px=(pp[0]+0.5)*C, py=(pp[1]+0.5)*C;
+    var ang=S.p.d>=0?S.p.d*Math.PI/2:0;
+    var m=(Math.sin(S.p.mouth)+1)/2*0.55+0.05;
+    if(S.state==='dying'){ m=Math.min(3.1,(1.3-S.timer)*3); }
+    ctx.fillStyle='#ffe44d'; ctx.shadowColor='#ffe44d'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.arc(px,py,C*0.42,ang+m,ang+Math.PI*2-m); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='#240a1e'; ctx.font='bold 11px Orbitron,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(S.state!=='dying') ctx.fillText('$',px-Math.cos(ang)*1,py-6*(S.p.d===0||S.p.d===2?1:0.4)-1);
+  }
+  // 恐慌
+  if(S.state!=='dying'){
+    for(i=0;i<4;i++){
+      var g=S.ghosts[i];
+      var q=g.wait>0?[HOME[0]+(i-1.5)*0.3,HOME[1]]:gpos(g);
+      drawGhost(g,(q[0]+0.5)*C,(q[1]+0.5)*C);
+    }
+  }
+  // 浮動分數
+  ctx.font='bold 13px Orbitron,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(i=0;i<S.popups.length;i++){ var pu=S.popups[i]; ctx.globalAlpha=Math.min(1,pu.life*2); ctx.fillStyle=pu.col; ctx.fillText(pu.txt,(pu.x+0.5)*C,(pu.y+0.5)*C-(1.1-pu.life)*22); }
+  ctx.globalAlpha=1;
+  if(S.state==='ready'||S.state==='clear'){
+    ctx.fillStyle='rgba(6,6,18,.45)'; ctx.fillRect(0,5*C+8,cv.width,C*1.5);
+    ctx.fillStyle=S.state==='ready'?'#ffe44d':'#7fffb0'; ctx.font='900 22px Orbitron,sans-serif'; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=12;
+    ctx.fillText(S.state==='ready'?'READY! 第 '+S.level+' 關':'流動性充足 ✔',cv.width/2,5*C+8+C*0.75); ctx.shadowBlur=0;
+  }
+  if(S.fright>0){ var w=S.fright/Math.max(2.5,7-(S.level-1)*0.6); ctx.fillStyle='#7fffb0'; ctx.fillRect(0,cv.height-4,cv.width*w,4); }
+}
+function drawGhost(g,cx,cy){
+  var r=C*0.42, col=GCOL[g.id];
+  if(!g.dead){
+    var fl=g.fr&&S.fright<2&&Math.floor(S.t*8)%2===0;
+    if(g.fr) col=fl?'#ffffff':'#3b5bff';
+    ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(cx,cy-1,r,Math.PI,0);
+    var bot=cy+r-1, w=r*2/3, k;
+    ctx.lineTo(cx+r,bot);
+    for(k=0;k<3;k++){ var sx=cx+r-k*w; ctx.lineTo(sx-w/2,bot-4-(Math.floor(S.t*10)%2)*1.5); ctx.lineTo(sx-w,bot); }
+    ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
+  }
+  // 眼睛
+  var d=g.d>=0?g.d:2, ox=DV[d][0]*2.5, oy=DV[d][1]*2.5;
+  if(g.fr&&!g.dead){
+    ctx.fillStyle='#fff'; ctx.fillRect(cx-6,cy-4,3,3); ctx.fillRect(cx+3,cy-4,3,3);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(cx-6,cy+4); ctx.lineTo(cx-3,cy+2); ctx.lineTo(cx,cy+4); ctx.lineTo(cx+3,cy+2); ctx.lineTo(cx+6,cy+4); ctx.stroke();
+  } else {
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx-5,cy-4,4,0,6.283); ctx.arc(cx+5,cy-4,4,0,6.283); ctx.fill();
+    ctx.fillStyle='#1a1a60'; ctx.beginPath(); ctx.arc(cx-5+ox,cy-4+oy,2,0,6.283); ctx.arc(cx+5+ox,cy-4+oy,2,0,6.283); ctx.fill();
+  }
+}
+
+// 主迴圈
+var last=0, running=false, paused=false;
+function loop(ts){
+  if(!running) return;
+  var dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  if(!paused){ update(dt); syncEaten(); if(S.state==='over'){} }
+  draw();
+  requestAnimationFrame(loop);
+}
+// 吃光一關後累計存款
+var _loadLevel=loadLevel;
+loadLevel=function(){ if(S.dotsTotal) S.totalEaten+=S.dotsTotal; _loadLevel(); };
+
+function startGame(){
+  newGame(); S.totalEaten=0;
+  $('ovStart').classList.add('hide'); $('ovEnd').classList.add('hide'); $('ovPause').classList.add('hide');
+  paused=false; if(!running){ running=true; last=performance.now(); requestAnimationFrame(loop); }
+}
+function setPause(p){
+  if(!S||S.state==='over') return;
+  paused=p; $('ovPause').classList.toggle('hide',!p);
+}
+function setWant(d){
+  if(!S||S.state==='over') return;
+  S.want=d;
+  var p=S.p;
+  if(p.d>=0 && d===(p.d+2)%4 && S.state==='play'){ reverse(p); }
+}
+document.addEventListener('keydown',function(e){
+  var k=e.key, d=-1;
+  if(k==='ArrowRight'||k==='d'||k==='D') d=0;
+  else if(k==='ArrowDown'||k==='s'||k==='S') d=1;
+  else if(k==='ArrowLeft'||k==='a'||k==='A') d=2;
+  else if(k==='ArrowUp'||k==='w'||k==='W') d=3;
+  if(d>=0){ e.preventDefault(); if(S&&!paused) setWant(d); return; }
+  if(k===' '||k==='p'||k==='P'){
+    e.preventDefault();
+    if(!$('ovStart').classList.contains('hide')||!$('ovEnd').classList.contains('hide')){ startGame(); return; }
+    setPause(!paused);
+  } else if(k==='Enter'){
+    if(!$('ovStart').classList.contains('hide')||!$('ovEnd').classList.contains('hide')) startGame();
+  }
+});
+$('btnStart').addEventListener('click',startGame);
+$('btnAgain').addEventListener('click',startGame);
+$('btnResume').addEventListener('click',function(){ setPause(false); });
+var btns=document.querySelectorAll('.dpad button');
+for(var bi=0;bi<btns.length;bi++){ (function(b){
+  var h=function(e){ e.preventDefault(); if(!paused) setWant(parseInt(b.getAttribute('data-d'),10)); };
+  b.addEventListener('touchstart',h,{passive:false}); b.addEventListener('mousedown',h);
+})(btns[bi]); }
+var tx0=0, ty0=0;
+cv.addEventListener('touchstart',function(e){ var t=e.touches[0]; tx0=t.clientX; ty0=t.clientY; e.preventDefault(); },{passive:false});
+cv.addEventListener('touchmove',function(e){
+  var t=e.touches[0], dx=t.clientX-tx0, dy=t.clientY-ty0;
+  if(Math.abs(dx)>18||Math.abs(dy)>18){
+    var d=Math.abs(dx)>Math.abs(dy)?(dx>0?0:2):(dy>0?1:3);
+    if(!paused) setWant(d); tx0=t.clientX; ty0=t.clientY;
+  }
+  e.preventDefault();
+},{passive:false});
+document.addEventListener('visibilitychange',function(){ if(document.hidden&&running&&S&&S.state==='play') setPause(true); });
+
+// 初始畫面
+newGame(); S.totalEaten=0; draw();
+})();
+</script>
+</body>
+</html>
