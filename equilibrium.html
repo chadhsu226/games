@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>供需平衡 EQUILIBRIUM | Chad's Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060612; --bg2:#0d0d24; --pink:#ff69b4; --yellow:#ffe44d; --green:#7fffb0;
+    --purple:#a855f7; --cyan:#22e0ff; --gold:#ffd700; --red:#ff5566; --text:#e8e8ff; --muted:#8888bb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(168,85,247,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 15%, rgba(255,105,180,0.6) 0%, transparent 100%);
+    pointer-events:none; z-index:0;
+  }
+  .wrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; padding:8px 8px 16px; user-select:none; -webkit-user-select:none; }
+  .topbar { width:min(96vw,680px); display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.85rem; }
+  .back:hover { color:var(--pink); }
+  .hint-top { color:var(--muted); font-size:.72rem; }
+  h1 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(.95rem,4vw,1.4rem); letter-spacing:.08em;
+    background:linear-gradient(90deg,var(--pink),var(--yellow),var(--green),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; text-align:center; }
+  .panel { width:min(96vw,680px); display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .stat { background:rgba(13,13,36,.85); border:1px solid rgba(168,85,247,.35); border-radius:10px; padding:5px 4px; text-align:center; }
+  .stat .l { font-size:.62rem; color:var(--muted); }
+  .stat .v { font-family:'Orbitron',sans-serif; font-weight:600; font-size:.95rem; color:var(--green); }
+  .stat.p .v { color:var(--yellow); }
+  .stat.t .v { color:var(--cyan); }
+  .stat.i .v { color:var(--pink); }
+  .trust { width:min(96vw,680px); display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:.72rem; color:var(--muted); }
+  .trust .bar { flex:1; height:10px; border-radius:6px; background:rgba(13,13,36,.9); border:1px solid rgba(168,85,247,.35); overflow:hidden; }
+  .trust .fill { height:100%; width:100%; background:linear-gradient(90deg,var(--red),var(--yellow),var(--green)); transition:width .1s linear; }
+  .stage { position:relative; width:min(96vw,680px); border-radius:14px; border:1px solid rgba(168,85,247,.45); box-shadow:0 0 28px rgba(168,85,247,.25),0 0 60px rgba(255,105,180,.1); background:#070718; overflow:hidden; }
+  canvas { display:block; width:100%; height:auto; touch-action:none; }
+  #banner { position:absolute; left:50%; top:8px; transform:translateX(-50%); max-width:92%; padding:5px 12px; border-radius:20px; font-size:.78rem; font-weight:700; text-align:center;
+    background:rgba(255,228,77,.14); border:1px solid var(--yellow); color:var(--yellow); box-shadow:0 0 14px rgba(255,228,77,.35); display:none; white-space:nowrap; }
+  #banner.go { background:rgba(255,85,102,.16); border-color:var(--red); color:#ffb0b8; box-shadow:0 0 14px rgba(255,85,102,.4); }
+  .ctrl { width:min(96vw,680px); margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .ctrl button { padding:14px 0; font-size:1rem; font-weight:700; font-family:'Noto Sans TC',sans-serif; color:var(--text); border-radius:12px; background:rgba(13,13,36,.9); border:1px solid rgba(34,224,255,.5); touch-action:none; }
+  .ctrl button:active, .ctrl button.on { background:rgba(34,224,255,.22); box-shadow:0 0 14px rgba(34,224,255,.45); }
+  .tip { width:min(96vw,680px); margin-top:8px; color:var(--muted); font-size:.72rem; text-align:center; line-height:1.5; }
+  .ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:16px;
+    background:rgba(6,6,18,.88); z-index:5; }
+  .ov.hide { display:none; }
+  .ov h2 { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1.1rem,5vw,1.7rem); letter-spacing:.06em; margin-bottom:8px;
+    background:linear-gradient(90deg,var(--cyan),var(--green),var(--yellow)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .ov p { font-size:.82rem; line-height:1.65; color:var(--text); max-width:520px; margin-bottom:6px; }
+  .ov p.m { color:var(--muted); font-size:.74rem; }
+  .ov b { color:var(--yellow); }
+  .btn { margin-top:10px; padding:11px 30px; font-family:'Orbitron','Noto Sans TC',sans-serif; font-weight:900; font-size:.95rem; letter-spacing:.06em; color:#06201c; border:none; border-radius:30px; cursor:pointer;
+    background:linear-gradient(135deg,var(--cyan),var(--green)); box-shadow:0 0 20px rgba(34,224,255,.45); }
+  .btn:active { transform:scale(.96); }
+  .res { display:grid; grid-template-columns:repeat(2,1fr); gap:6px 16px; margin:8px 0; font-size:.8rem; }
+  .res div span { color:var(--yellow); font-family:'Orbitron',sans-serif; font-weight:600; }
+  .newbest { color:var(--pink); font-weight:700; font-size:.85rem; margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="index.html">← 返回遊戲選單</a><span class="hint-top">←→ / ↑↓ 調價 · 空白鍵暫停</span></div>
+  <h1>供需平衡 EQUILIBRIUM</h1>
+  <div class="panel">
+    <div class="stat"><div class="l">分數</div><div class="v" id="sScore">0</div></div>
+    <div class="stat p"><div class="l">最佳</div><div class="v" id="sBest">0</div></div>
+    <div class="stat t"><div class="l">市場效率</div><div class="v" id="sEff">100%</div></div>
+    <div class="stat i"><div class="l">連擊倍率</div><div class="v" id="sCombo">×1.0</div></div>
+  </div>
+  <div class="trust"><span>顧客信任</span><div class="bar"><div class="fill" id="trustFill"></div></div></div>
+  <div class="stage">
+    <canvas id="cv" width="680" height="450"></canvas>
+    <div id="banner"></div>
+
+    <div class="ov" id="ovStart">
+      <h2>沐茶 · 供需平衡</h2>
+      <p>你是沐茶的店長，每天要替熱茶<b>訂價</b>。<span style="color:var(--pink)">粉紅線＝需求</span>、<span style="color:var(--green)">綠線＝供給</span>，兩線交點就是<b>均衡價格</b>。</p>
+      <p>把<span style="color:var(--cyan)">青色定價線</span>貼著均衡點：定太高會滯銷、定太低會缺貨，<span style="color:#ff8591">紅色三角形</span>就是流失的社會福利（無謂損失）。</p>
+      <p class="m">市場會突發衝擊（下雨、茶葉歉收…），黃色預告出現時請提前預判曲線移動後的新均衡。效率連續 ≥97% 可累積連擊倍率；顧客信任歸零就倒閉。</p>
+      <button class="btn" id="btnStart">▶ 開始營業</button>
+      <p class="m" style="margin-top:8px">鍵盤：← ↓ 降價、→ ↑ 漲價　手機：拖曳畫面或按下方按鈕</p>
+    </div>
+    <div class="ov hide" id="ovPause">
+      <h2>暫停中</h2>
+      <button class="btn" id="btnResume">繼續</button>
+    </div>
+    <div class="ov hide" id="ovOver">
+      <h2>沐茶打烊了</h2>
+      <div class="newbest" id="newBest" style="display:none">🎉 新紀錄！</div>
+      <div class="res">
+        <div>分數：<span id="rScore">0</span></div>
+        <div>最佳：<span id="rBest">0</span></div>
+        <div>營業時間：<span id="rTime">0</span> 秒</div>
+        <div>平均效率：<span id="rEff">0</span>%</div>
+        <div>最長連擊：<span id="rCombo">0</span> 秒</div>
+        <div>撐過衝擊：<span id="rShock">0</span> 次</div>
+      </div>
+      <p id="rMsg"></p>
+      <p class="m">社會福利 ＝ 消費者剩餘 ＋ 生產者剩餘；價格偏離均衡越遠，成交量越少、無謂損失越大。</p>
+      <button class="btn" id="btnAgain">再營業一次</button>
+    </div>
+  </div>
+  <div class="ctrl">
+    <button id="bDown">▼ 降價</button>
+    <button id="bUp">▲ 漲價</button>
+  </div>
+  <div class="tip">畫面下半部是近 8 秒的「均衡價（黃）」與「你的定價（青）」，兩條線越貼近，分數越高。</div>
+</div>
+
+<script>
+(function(){
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var W = 680, H = 450;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  var PMAX = 120, BD = 0.6, BS = 0.5;
+  var CX0 = 50, CX1 = 664, CY0 = 18, CY1 = 262;
+  var HX0 = 50, HX1 = 664, HY0 = 300, HY1 = 432;
+  function mx(q){ return CX0 + q/100*(CX1-CX0); }
+  function my(p){ return CY1 - p/PMAX*(CY1-CY0); }
+  function hy(p){ return HY1 - p/PMAX*(HY1-HY0); }
+
+  var $ = function(id){ return document.getElementById(id); };
+  var best = 0;
+  try { best = parseInt(localStorage.getItem('equilibrium-best') || '0', 10) || 0; } catch(e) {}
+  $('sBest').textContent = best;
+
+  var state = 'start';
+  var S = {};
+
+  function pStar(ad, as){ return (ad*BS + as*BD)/(BD+BS); }
+  function qStar(ad, as){ return (ad-as)/(BD+BS); }
+
+  function reset(){
+    S = {
+      t:0, score:0, trust:100,
+      cur:{ad:90, as:20}, tgt:{ad:90, as:20},
+      p:55, v:0, target:null,
+      eff:1, effSum:0, effN:0, combo:0, bestCombo:0,
+      shocks:0, nextShock:5, pending:null, banner:0,
+      hist:[], histT:0, wobT:0, lastScoreShown:-1
+    };
+    S.p = pStar(90,20);
+    for (var i=0;i<160;i++) S.hist.push([S.p, S.p]);
+  }
+  reset();
+
+  // ---- input ----
+  var keys = {};
+  var btnUp = false, btnDown = false;
+  window.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(k) >= 0) e.preventDefault();
+    keys[k.toLowerCase()] = true;
+    if (k === ' ' || k.toLowerCase() === 'p') {
+      if (state === 'start') startGame();
+      else if (state === 'play') pauseGame();
+      else if (state === 'pause') resumeGame();
+      else if (state === 'over') startGame();
+    }
+  });
+  window.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('blur', function(){ keys = {}; btnUp = btnDown = false; if (state === 'play') pauseGame(); });
+
+  function holdBtn(id, fn){
+    var el = $(id);
+    function on(e){ e.preventDefault(); fn(true); el.classList.add('on'); }
+    function off(e){ if (e) e.preventDefault(); fn(false); el.classList.remove('on'); }
+    el.addEventListener('touchstart', on, {passive:false});
+    el.addEventListener('touchend', off, {passive:false});
+    el.addEventListener('touchcancel', off, {passive:false});
+    el.addEventListener('mousedown', on);
+    el.addEventListener('mouseup', off);
+    el.addEventListener('mouseleave', off);
+  }
+  holdBtn('bUp', function(v){ btnUp = v; });
+  holdBtn('bDown', function(v){ btnDown = v; });
+
+  var dragging = false;
+  function pointerPrice(e){
+    var r = cv.getBoundingClientRect();
+    var y = (e.clientY - r.top) / r.height * H;
+    var p;
+    if (y < 280) p = (CY1 - y)/(CY1-CY0)*PMAX;
+    else p = (HY1 - y)/(HY1-HY0)*PMAX;
+    return Math.max(0, Math.min(PMAX, p));
+  }
+  cv.addEventListener('pointerdown', function(e){
+    if (state !== 'play') return;
+    dragging = true; S.target = pointerPrice(e);
+    try { cv.setPointerCapture(e.pointerId); } catch(x) {}
+  });
+  cv.addEventListener('pointermove', function(e){ if (dragging && state === 'play') S.target = pointerPrice(e); });
+  function endDrag(){ dragging = false; if (S) S.target = null; }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+
+  $('btnStart').onclick = startGame;
+  $('btnAgain').onclick = startGame;
+  $('btnResume').onclick = resumeGame;
+
+  function show(id, on){ $(id).classList.toggle('hide', !on); }
+  function startGame(){
+    reset(); state = 'play';
+    show('ovStart', false); show('ovOver', false); show('ovPause', false);
+    $('banner').style.display = 'none';
+    last = performance.now();
+  }
+  function pauseGame(){ state = 'pause'; show('ovPause', true); }
+  function resumeGame(){ state = 'play'; show('ovPause', false); last = performance.now(); }
+
+  // ---- shocks ----
+  var EVENTS = [
+    {k:'ad', s: 1, msg:'☔ 午後雷陣雨：熱茶需求暴增（需求右移）'},
+    {k:'ad', s:-1, msg:'☀ 天氣轉熱：熱茶需求下滑（需求左移）'},
+    {k:'ad', s: 1, msg:'📣 網紅打卡爆紅：客人排到門口（需求右移）'},
+    {k:'ad', s:-1, msg:'🏬 對面開了新茶店：客人被分流（需求左移）'},
+    {k:'as', s: 1, msg:'🌧 茶園歉收：進貨成本上升（供給左移）'},
+    {k:'as', s:-1, msg:'🚜 簽下新農場：進貨成本下降（供給右移）'},
+    {k:'as', s: 1, msg:'⛽ 運費調漲：每杯成本墊高（供給左移）'},
+    {k:'as', s:-1, msg:'🤖 導入自動萃茶機：成本下降（供給右移）'}
+  ];
+  function planShock(){
+    var lvl = Math.min(1, S.t/90);
+    var n = (S.t > 60 && Math.random() < 0.5) ? 2 : 1;
+    var tgt = {ad:S.tgt.ad, as:S.tgt.as};
+    var msgs = [];
+    var used = {};
+    for (var i=0;i<n;i++){
+      var ev, tries = 0;
+      do { ev = EVENTS[Math.floor(Math.random()*EVENTS.length)]; tries++; } while (used[ev.k] && tries < 20);
+      used[ev.k] = true;
+      var m = 9 + Math.random()*(7 + lvl*14);
+      var sgn = ev.s, msg = ev.msg;
+      var nv = tgt[ev.k] + sgn*m;
+      var tryT = {ad:tgt.ad, as:tgt.as}; tryT[ev.k] = nv;
+      if (!okCurve(tryT)) {
+        sgn = -sgn; nv = tgt[ev.k] + sgn*m; tryT[ev.k] = nv;
+        if (!okCurve(tryT)) continue;
+        for (var j=0;j<EVENTS.length;j++){ if (EVENTS[j].k === ev.k && EVENTS[j].s === sgn) { msg = EVENTS[j].msg; break; } }
+      }
+      tgt = tryT; msgs.push(msg);
+    }
+    if (!msgs.length) return null;
+    var warn = Math.max(1.0, 1.9 - S.t/110);
+    return { tgt:tgt, msg:msgs.join(' ＋ '), warn:warn, left:warn };
+  }
+  function okCurve(c){ var d = c.ad - c.as; return c.ad >= 55 && c.ad <= 115 && c.as >= 0 && c.as <= 45 && d >= 40 && d <= 100; }
+
+  // ---- update ----
+  function eff(ad, as, p){
+    var qd = Math.max(0,(ad-p)/BD), qs = Math.max(0,(p-as)/BS);
+    var q = Math.min(qd, qs);
+    var w = q*(ad-as) - 0.5*(BD+BS)*q*q;
+    var wmax = 0.5*(ad-as)*(ad-as)/(BD+BS);
+    return {e: Math.max(0, Math.min(1, w/wmax)), q:q, qd:qd, qs:qs};
+  }
+  function curEff(){
+    var k = Math.max(0, Math.min(1,(S.t-30)/20));
+    var ad = S.cur.ad + k*(4*Math.sin(S.t*0.7) + 3*Math.sin(S.t*1.9+1));
+    var as = S.cur.as + k*(3*Math.sin(S.t*0.55+2) + 2*Math.sin(S.t*1.6));
+    return {ad:ad, as:as};
+  }
+
+  function update(dt){
+    S.t += dt;
+    if (!S.pending) {
+      S.nextShock -= dt;
+      if (S.nextShock <= 0) {
+        S.pending = planShock();
+        if (!S.pending) S.nextShock = 2;
+      }
+    } else {
+      S.pending.left -= dt;
+      if (S.pending.left <= 0) {
+        S.tgt = S.pending.tgt; S.pending = null; S.shocks++;
+        S.nextShock = Math.max(2.4, 6 - S.t/25) * (0.8 + Math.random()*0.5);
+        S.banner = 1.2;
+      }
+    }
+    var tw = Math.min(1, dt*5);
+    S.cur.ad += (S.tgt.ad - S.cur.ad)*tw;
+    S.cur.as += (S.tgt.as - S.cur.as)*tw;
+
+    var dir = 0;
+    if (keys['arrowup'] || keys['arrowright'] || keys['w'] || keys['d'] || btnUp) dir += 1;
+    if (keys['arrowdown'] || keys['arrowleft'] || keys['s'] || keys['a'] || btnDown) dir -= 1;
+    var vmax = 46;
+    var vt;
+    if (S.target !== null && dir === 0) {
+      var diff = S.target - S.p;
+      vt = Math.max(-vmax*1.3, Math.min(vmax*1.3, diff*9));
+    } else vt = dir*vmax;
+    S.v += (vt - S.v) * Math.min(1, dt*9);
+    S.p = Math.max(0, Math.min(PMAX, S.p + S.v*dt));
+
+    var c = curEff();
+    var r = eff(c.ad, c.as, S.p);
+    S.eff = r.e; S.effSum += r.e*dt; S.effN += dt;
+    var g = Math.pow(r.e, 6);
+    if (r.e >= 0.97) { S.combo += dt; if (S.combo > S.bestCombo) S.bestCombo = S.combo; } else S.combo = 0;
+    var mult = 1 + Math.min(5, Math.floor(S.combo/3))*0.5;
+    S.mult = mult;
+    S.score += 40*g*mult*dt;
+
+    if (r.e < 0.9) S.trust += (r.e - 0.9)*25*dt;
+    else S.trust += (r.e - 0.9)*20*dt;
+    S.trust = Math.min(100, S.trust);
+
+    S.histT += dt;
+    while (S.histT >= 0.05) {
+      S.histT -= 0.05;
+      S.hist.push([pStar(c.ad, c.as), S.p]);
+      if (S.hist.length > 160) S.hist.shift();
+    }
+    if (S.banner > 0) S.banner -= dt;
+
+    if (S.trust <= 0) { S.trust = 0; endGame(); }
+  }
+
+  function endGame(){
+    state = 'over';
+    var sc = Math.floor(S.score);
+    var isNew = sc > best;
+    if (isNew) { best = sc; try { localStorage.setItem('equilibrium-best', String(best)); } catch(e) {} }
+    $('rScore').textContent = sc; $('rBest').textContent = best;
+    $('rTime').textContent = S.t.toFixed(1);
+    var avg = S.effN > 0 ? S.effSum/S.effN*100 : 0;
+    $('rEff').textContent = avg.toFixed(1);
+    $('rCombo').textContent = S.bestCombo.toFixed(1);
+    $('rShock').textContent = S.shocks;
+    $('newBest').style.display = isNew ? 'block' : 'none';
+    var msg;
+    if (avg >= 90) msg = '你幾乎隨時貼著均衡價！沐茶的社會福利幾乎沒有流失。';
+    else if (avg >= 75) msg = '大多數時間定價合理，但衝擊來時反應稍慢，無謂損失累積了不少。';
+    else msg = '價格長期偏離均衡：定太高茶葉賣不掉，定太低又被搶購一空，兩邊都在流失福利。試著在黃色預告時就先動作！';
+    $('rMsg').textContent = msg;
+    show('ovOver', true);
+    $('sBest').textContent = best;
+  }
+
+  // ---- draw ----
+  function line(x1,y1,x2,y2,col,w,dash){
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.strokeStyle = col; ctx.lineWidth = w;
+    ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#070718'; ctx.fillRect(0,0,W,H);
+    ctx.font = '11px "Noto Sans TC", sans-serif';
+    var c = curEff();
+    var ps = pStar(c.ad, c.as), qs = qStar(c.ad, c.as);
+    var r = eff(c.ad, c.as, S.p);
+
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(136,136,187,.13)';
+    ctx.fillStyle = 'rgba(136,136,187,.8)'; ctx.textAlign = 'right';
+    for (var p=0;p<=120;p+=20){ line(CX0,my(p),CX1,my(p),'rgba(136,136,187,.13)',1); ctx.fillText(p, CX0-6, my(p)+4); }
+    ctx.textAlign = 'center';
+    for (var q=0;q<=100;q+=20){ line(mx(q),CY0,mx(q),CY1,'rgba(136,136,187,.13)',1); ctx.fillText(q, mx(q), CY1+14); }
+    ctx.fillText('數量 Q（杯）', (CX0+CX1)/2, CY1+27);
+    ctx.save(); ctx.translate(12, (CY0+CY1)/2); ctx.rotate(-Math.PI/2); ctx.fillText('價格 P（元）', 0, 0); ctx.restore();
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(CX0,CY0,CX1-CX0,CY1-CY0); ctx.clip();
+
+    if (r.e < 0.995) {
+      var qt = r.q;
+      ctx.beginPath();
+      ctx.moveTo(mx(qt), my(c.ad - BD*qt));
+      ctx.lineTo(mx(qt), my(c.as + BS*qt));
+      ctx.lineTo(mx(qs), my(ps));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,85,102,.42)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,85,102,.9)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+    if (S.pending) {
+      var gd = S.pending.tgt;
+      line(mx(0), my(gd.ad), mx(100), my(gd.ad-BD*100), 'rgba(255,105,180,.55)', 2, [6,5]);
+      line(mx(0), my(gd.as), mx(100), my(gd.as+BS*100), 'rgba(127,255,176,.55)', 2, [6,5]);
+      var gp = pStar(gd.ad, gd.as), gq = qStar(gd.ad, gd.as);
+      ctx.beginPath(); ctx.arc(mx(gq), my(gp), 7, 0, 7);
+      ctx.strokeStyle = 'rgba(255,228,77,.8)'; ctx.setLineDash([3,3]); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ff69b4';
+    line(mx(0), my(c.ad), mx(100), my(c.ad-BD*100), '#ff69b4', 3);
+    ctx.shadowColor = '#7fffb0';
+    line(mx(0), my(c.as), mx(100), my(c.as+BS*100), '#7fffb0', 3);
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = '#22e0ff'; ctx.shadowBlur = 8;
+    line(CX0, my(S.p), CX1, my(S.p), '#22e0ff', 2, [8,5]);
+    ctx.shadowBlur = 0;
+    function dot(x,y,col,rad){ ctx.beginPath(); ctx.arc(x,y,rad,0,7); ctx.fillStyle = col; ctx.fill(); }
+    if (r.qd <= 100) dot(mx(r.qd), my(S.p), '#ff69b4', 5);
+    if (r.qs <= 100) dot(mx(r.qs), my(S.p), '#7fffb0', 5);
+    var pulse = 1 + 0.15*Math.sin(S.t*6);
+    ctx.shadowColor = '#ffe44d'; ctx.shadowBlur = 14;
+    dot(mx(qs), my(ps), '#ffe44d', 6*pulse);
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(mx(qs), my(ps), 11, 0, 7); ctx.strokeStyle = 'rgba(255,228,77,.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+
+    ctx.textAlign = 'left'; ctx.font = '700 12px "Noto Sans TC", sans-serif';
+    ctx.fillStyle = '#ff69b4'; ctx.fillText('D 需求', mx(2), my(c.ad)+16);
+    ctx.fillStyle = '#7fffb0'; ctx.fillText('S 供給', mx(76), Math.max(CY0+14, my(c.as+BS*76))-8);
+    ctx.fillStyle = '#ffe44d'; ctx.font = '11px "Noto Sans TC", sans-serif';
+    ctx.fillText('均衡 P*=' + ps.toFixed(0), mx(qs)+12, my(ps)-10);
+    ctx.fillStyle = '#22e0ff'; ctx.font = '700 12px "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('你的定價 $' + S.p.toFixed(0), CX1-6, my(S.p) - 6 < CY0+12 ? my(S.p)+16 : my(S.p)-6);
+    ctx.textAlign = 'left'; ctx.font = '11px "Noto Sans TC", sans-serif';
+    var gap = S.p - ps, st, sc;
+    if (Math.abs(gap) < 3) { st = '✔ 供需相當'; sc = '#7fffb0'; }
+    else if (gap > 0) { st = '📦 滯銷：賣不完（供過於求）'; sc = '#ffb86b'; }
+    else { st = '🏃 缺貨：排隊流失（供不應求）'; sc = '#ff8591'; }
+    ctx.fillStyle = sc; ctx.fillText(st, CX0+8, CY1-8);
+
+    ctx.fillStyle = 'rgba(13,13,36,.8)'; ctx.fillRect(HX0, HY0, HX1-HX0, HY1-HY0);
+    ctx.strokeStyle = 'rgba(168,85,247,.35)'; ctx.lineWidth = 1; ctx.strokeRect(HX0, HY0, HX1-HX0, HY1-HY0);
+    ctx.fillStyle = 'rgba(136,136,187,.8)'; ctx.textAlign = 'left'; ctx.font = '10px "Noto Sans TC", sans-serif';
+    ctx.fillText('近 8 秒：均衡價 P*（黃）vs 你的定價（青）', HX0+6, HY0-5);
+    var n = S.hist.length, step = (HX1-HX0)/159;
+    ctx.beginPath();
+    for (var i=0;i<n;i++){ var x = HX1 - (n-1-i)*step; i? ctx.lineTo(x, hy(S.hist[i][0])) : ctx.moveTo(x, hy(S.hist[i][0])); }
+    for (var j=n-1;j>=0;j--){ var x2 = HX1 - (n-1-j)*step; ctx.lineTo(x2, hy(S.hist[j][1])); }
+    ctx.closePath(); ctx.fillStyle = 'rgba(255,85,102,.22)'; ctx.fill();
+    function hline(idx,col){
+      ctx.beginPath();
+      for (var k=0;k<n;k++){ var xx = HX1 - (n-1-k)*step, yy = hy(S.hist[k][idx]); k? ctx.lineTo(xx,yy) : ctx.moveTo(xx,yy); }
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+    }
+    hline(0,'#ffe44d'); hline(1,'#22e0ff');
+
+    var b = $('banner');
+    if (state === 'play' && S.pending) {
+      b.style.display = 'block'; b.className = '';
+      b.textContent = '⚠ 預告：' + S.pending.msg + '　' + Math.max(0,S.pending.left).toFixed(1) + 's';
+    } else if (state === 'play' && S.banner > 0) {
+      b.style.display = 'block'; b.className = 'go';
+      b.textContent = '衝擊發生！曲線已移動，快追上新均衡';
+    } else b.style.display = 'none';
+  }
+
+  function hud(){
+    var sc = Math.floor(S.score);
+    $('sScore').textContent = sc;
+    if (sc > best) $('sBest').textContent = sc;
+    $('sEff').textContent = (S.eff*100).toFixed(0) + '%';
+    $('sCombo').textContent = '×' + (S.mult || 1).toFixed(1);
+    $('trustFill').style.width = Math.max(0,S.trust) + '%';
+  }
+
+  var last = performance.now();
+  function loop(now){
+    var dt = Math.min(0.05, (now - last)/1000); last = now;
+    if (state === 'play') update(dt);
+    draw(); hud();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
