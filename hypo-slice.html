@@ -492,6 +492,7 @@ function pct(v){ return (v * 100).toFixed(0) + '%'; }
 function end(reason){
   if (!S.run) return;
   S.run = false; S.over = true; endStroke(); kb.blade = false;
+  hud();
   const cap = Math.round(S.cap * 10) / 10;
   const alpha = S.badTot ? S.badCut / S.badTot : 0;
   const beta = S.goodTot ? S.goodMiss / S.goodTot : 0;
